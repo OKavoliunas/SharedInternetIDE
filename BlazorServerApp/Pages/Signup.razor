@@ -1,0 +1,22 @@
+﻿@page "/signup"
+
+<div class="login-container">
+	<h3>Create an Account</h3>
+	<div class="email">
+		<label for="signup-email-input-field">EMAIL</label>
+		<input type="text" required autocomplete="email" id="signup-email-input-field" name="email" autocorrect="off">
+	</div>
+	<div class="password">
+		<label for="signup-email-input-field">PASSWORD</label>
+		<input type="password" required autocapitalize="off" id="signup-password-input-field">
+	</div>
+	<div class="signup-button">
+		<button type="submit">Create Account</button>
+	</div>
+	<div class="login">
+		 Already have an account? <a href="/login">Log in</a>
+	</div>
+</div>
+@code {
+
+}
