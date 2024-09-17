@@ -1,14 +1,21 @@
 ﻿@page "/signup"
+@using Microsoft.AspNetCore.Identity
+@using System.ComponentModel.DataAnnotations
+@inject UserManager<IdentityUser> UserManager
+@inject SignInManager<IdentityUser> SignInManager
+@inject NavigationManager NavigationManager
 
-<div class="login-container">
-	<h3>Create an Account</h3>
+<EditForm Model="registerModel" OnValidSubmit="HandleValidSubmit">
+    <DataAnnotationsValidator />
+	<ValidationSummary />
+    <h3>Create an Account</h3>
 	<div class="email">
 		<label for="signup-email-input-field">EMAIL</label>
-		<input type="text" required autocomplete="email" id="signup-email-input-field" name="email" autocorrect="off">
+		<InputText @bind-Value="registerModel.Email" type="text" required autocomplete="email" id="signup-email-input-field" name="email" autocorrect="off" />
 	</div>
 	<div class="password">
 		<label for="signup-email-input-field">PASSWORD</label>
-		<input type="password" required autocapitalize="off" id="signup-password-input-field">
+		<InputText @bind-Value="registerModel.Password" type="password" required autocapitalize="off" id="signup-password-input-field" />
 	</div>
 	<div class="signup-button">
 		<button type="submit">Create Account</button>
@@ -16,7 +23,40 @@
 	<div class="login">
 		 Already have an account? <a href="/login">Log in</a>
 	</div>
-</div>
+</EditForm>
 @code {
+    private RegisterModel registerModel = new RegisterModel();
 
+    private async Task HandleValidSubmit()
+    {
+        var user = new IdentityUser { UserName = registerModel.Email, Email = registerModel.Email };
+        var result = await UserManager.CreateAsync(user, registerModel.Password);
+
+        if (result.Succeeded)
+        {
+            var signInUrl = $"/SignIn?userId={user.Id}";
+            NavigationManager.NavigateTo(signInUrl, forceLoad: true);
+        }
+        else
+        {
+            foreach (var error in result.Errors)
+            {
+                // Display errors to the user
+                validationMessages.Add(error.Description);
+            }
+        }
+    }
+
+    private List<string> validationMessages = new List<string>();
+
+    public class RegisterModel
+    {
+        [Required]
+        [EmailAddress]
+        public string Email { get; set; }
+
+        [Required]
+        [DataType(DataType.Password)]
+        public string Password { get; set; }
+    }
 }
