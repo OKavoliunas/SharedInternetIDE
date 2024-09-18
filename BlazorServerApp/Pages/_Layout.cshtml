@@ -12,8 +12,20 @@
     <component type="typeof(HeadOutlet)" render-mode="ServerPrerendered" />
 </head>
 <body>
+    @if (User.Identity.IsAuthenticated)
+    {
+        <a href="Identity/Account/Manage">Hello, @User.Identity.Name!</a>
+        <form method="post" action="logout">
+            <button type="submit">Logout</button>
+        </form>
+    }
+    else
+    {
+        <a href="login">Login</a>
+        <a href="signup">Register</a>
+    }
     @RenderBody()
-
+    
     <div id="blazor-error-ui">
         <environment include="Staging,Production">
             An error has occurred. This application may no longer respond until reloaded.

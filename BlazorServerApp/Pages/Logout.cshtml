@@ -1,0 +1,10 @@
+﻿@page
+@model LogoutModel
+@{
+    Layout = null;
+}
+
+<form method="post">
+    @Html.AntiForgeryToken()
+    <button type="submit">Logout</button>
+</form>

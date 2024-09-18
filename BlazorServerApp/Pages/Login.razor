@@ -31,10 +31,12 @@
 
 	private async Task HandleValidSubmit()
 	{
+		var user = new IdentityUser { UserName = loginModel.Email, Email = loginModel.Email };
 		var result = await SignInManager.PasswordSignInAsync(loginModel.Email, loginModel.Password, isPersistent: false, lockoutOnFailure: false);
 		if (result.Succeeded)
 		{
-			NavigationManager.NavigateTo("/");
+			var signInUrl = $"/SignIn?userId={user.Id}";
+            NavigationManager.NavigateTo(signInUrl, forceLoad: true);
 		}
 		else
 		{
