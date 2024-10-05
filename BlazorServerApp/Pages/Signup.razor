@@ -4,26 +4,25 @@
 @inject UserManager<IdentityUser> UserManager
 @inject SignInManager<IdentityUser> SignInManager
 @inject NavigationManager NavigationManager
+<div class="container" id="registration-page">
+    <EditForm id="registration-form" Model="registerModel" OnValidSubmit="HandleValidSubmit">
+        <DataAnnotationsValidator />
+	    <ValidationSummary />
 
-<EditForm Model="registerModel" OnValidSubmit="HandleValidSubmit">
-    <DataAnnotationsValidator />
-	<ValidationSummary />
-    <h3>Create an Account</h3>
-	<div class="email">
-		<label for="signup-email-input-field">EMAIL</label>
-		<InputText @bind-Value="registerModel.Email" type="text" required autocomplete="email" id="signup-email-input-field" name="email" autocorrect="off" />
-	</div>
-	<div class="password">
-		<label for="signup-email-input-field">PASSWORD</label>
-		<InputText @bind-Value="registerModel.Password" type="password" required autocapitalize="off" id="signup-password-input-field" />
-	</div>
-	<div class="signup-button">
-		<button type="submit">Create Account</button>
-	</div>
-	<div class="login">
-		 Already have an account? <a href="/login">Log in</a>
-	</div>
-</EditForm>
+	    <div class="registration-field">
+		    <label for="signup-email-input-field">EMAIL</label>
+		    <InputText @bind-Value="registerModel.Email" type="text" required autocomplete="email" id="signup-email-input-field" name="email" autocorrect="off" />
+	    </div>
+	    <div class="registration-field">
+		    <label for="signup-email-input-field">PASSWORD</label>
+		    <InputText @bind-Value="registerModel.Password" type="password" required autocapitalize="off" id="signup-password-input-field" />
+	    </div>
+		<button class="register-button" type="submit">Create Account</button>
+	    <div class="login">
+		     Already have an account? <a href="Login">Log in</a>
+	    </div>
+    </EditForm>
+</div>
 @code {
     private RegisterModel registerModel = new RegisterModel();
 

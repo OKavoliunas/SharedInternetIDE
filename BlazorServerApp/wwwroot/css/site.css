@@ -95,7 +95,7 @@ a, .btn-link {
     margin-right: auto;
     padding-left: 0.5rem;
 }
-#login-form {
+#login-form, #registration-form{
     background-color: #FCFCFC;
     max-width: 432px;
     display: flex;
@@ -105,13 +105,13 @@ a, .btn-link {
     padding-top: 150px;
     flex: 1;
 }
-.login-field {
+.login-field, .registration-field {
     display:flex;
     flex-direction: column;
     position:relative;
 }
     
-.login-field label {
+.login-field label, .registration-field label {
     position: absolute;
     top: 8px;
     left: 16px;
@@ -120,7 +120,7 @@ a, .btn-link {
     font-size:10px;
     font-weight:600;
 }
-.login-field input {
+.login-field input, .registration-field input {
     max-width: 100%;
     height: 24px;
     padding-left: 16px;
@@ -133,7 +133,7 @@ a, .btn-link {
     border-radius: 5px;
     z-index:0;
 }
-.login-button {
+.login-button, .register-button {
     height: 67px;
     width: 100%;
     background-color: #007ACC;
@@ -144,16 +144,16 @@ a, .btn-link {
     border-radius: 5px;
     margin-bottom: 15px;
 }
-    .login-button:hover {
+    .login-button:hover, .register-button:hover {
         background-color: #025b96;
         cursor: pointer;
     }
-#login-page{
+#login-page, #registration-page{
     display:flex;
     justify-content:center;
     min-height:100vh;
 }
-.signup {
+.signup, .login {
     font-weight:600;
     z-index:2;
 }
