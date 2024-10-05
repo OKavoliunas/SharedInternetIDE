@@ -2,7 +2,7 @@
 @model LoginModel
 @addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
 @{
-    Layout = null;
+    Layout = "_Layout";
 }
 
 <!DOCTYPE html>
@@ -12,27 +12,27 @@
     <title>Login</title>
 </head>
 <body>
-    <form method="post">
-        @Html.AntiForgeryToken()
-        <div asp-validation-summary="All"></div>
-        <div>
-            <label>Email:</label>
-            <input asp-for="Input.Email" />
-            <span asp-validation-for="Input.Email"></span>
-        </div>
-        <div>
-            <label>Password:</label>
-            <input asp-for="Input.Password" type="password" />
-            <span asp-validation-for="Input.Password"></span>
-        </div>
-        <button type="submit">Log In</button>
-    </form>
-    @if (!string.IsNullOrEmpty(Model.ErrorMessage))
-    {
-        <div class="error">@Model.ErrorMessage</div>
-    }
-    @section Scripts {
-        <partial name="_ValidationScriptsPartial" />
-    }
+    <div class="container" id="login-page">
+        <form method="post" class="login" id="login-form">
+            @Html.AntiForgeryToken()
+            <div asp-validation-summary="All"></div>
+            <div class="login-field">
+                <label>EMAIL</label>
+                <input asp-for="Input.Email" />
+                <span asp-validation-for="Input.Email"></span>
+            </div>
+            <div class="login-field">
+                <label>PASSWORD</label>
+                <input asp-for="Input.Password" type="password" />
+                <span asp-validation-for="Input.Password"></span>
+            </div>
+            <button class="login-button" type="submit">Log In</button>
+            <div class="signup">Don't yet have an account? <a href="/Signup">Sign up</a></div>
+        </form>
+        @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+        {
+            <div class="error">@Model.ErrorMessage</div>
+        }
+    </div>
 </body>
 </html>
