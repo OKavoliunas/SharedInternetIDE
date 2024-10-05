@@ -14,7 +14,7 @@ public class LogoutModel : PageModel
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> OnPost()
+    public async Task<IActionResult> OnPostAsync()
     {
         await signInManager.SignOutAsync();
         return LocalRedirect("~/");

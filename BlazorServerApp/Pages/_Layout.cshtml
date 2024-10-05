@@ -15,14 +15,14 @@
     @if (User.Identity.IsAuthenticated)
     {
         <a href="Identity/Account/Manage">Hello, @User.Identity.Name!</a>
-        <form method="post" action="logout">
+        <form method="post" asp-page="/Logout">
             <button type="submit">Logout</button>
         </form>
     }
     else
     {
-        <a href="login">Login</a>
-        <a href="signup">Register</a>
+        <a href="Login">Login</a>
+        <a href="Signup">Register</a>
     }
     @RenderBody()
     
