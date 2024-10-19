@@ -8,11 +8,6 @@ namespace BlazorServerApp.Services
         public UserFileService(IConfiguration configuration) 
         {
             basePath = configuration["FileStorage:Basepath"] ?? "D:/CompilerApp/StoredFiles";
-
-            if (!Directory.Exists(basePath)) 
-            {
-                Directory.CreateDirectory(basePath);
-            }
             
         }
         public async Task CreateProjectDirectoriesAsync(string userId, int projectId) 
