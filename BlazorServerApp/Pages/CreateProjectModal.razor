@@ -1,0 +1,86 @@
+﻿@using Microsoft.AspNetCore.Components
+@inject Microsoft.AspNetCore.Http.IHttpContextAccessor HttpContextAccessor
+@if (Visible)
+{
+	
+<div class="modal-backdrop">
+	<div class="modal">
+		<div class="fileName">
+			<h3>Create New Environment</h3>
+			<label>File Name:</label>
+			<input type="text" id="fileName" @bind="fileName">
+		</div>
+		<div class="languageName">
+			<label>Programming Language:</label>
+			<select id="selectedLanguage" @bind="selectedLanguage">
+				@foreach (var language in languages)
+				{
+					<option value="@language.languageName">@language.languageName</option>
+				}
+			</select>
+		</div>
+		<div class="modal-buttons">
+			<button @onclick="OnCancel">Cancel</button>
+			<button @onclick="OnCreateEnvironment">Create Environment</button>
+		</div>
+	</div>
+</div>
+}
+@code {
+	[Parameter]
+	public bool Visible { get; set; }
+	[Parameter]
+	public EventCallback<bool> VisibleChanged { get; set; }
+
+	[Parameter]
+	public EventCallback<ProjectCreatedEventArgs> ProjectCreated { get; set; }
+
+	private string fileName = string.Empty;
+	private string selectedLanguage = string.Empty;
+
+	private List<(string languageName, string languageExtension)> languages = new List<(string, string)>
+	{
+		("C",".c"),
+		("C++",".cpp"),
+		("Java",".java") 
+	};
+
+	private async Task OnCancel()
+	{
+		Visible = false;
+		await VisibleChanged.InvokeAsync(Visible);
+	}
+
+	private async Task OnCreateEnvironment()
+	{
+		Console.WriteLine("OnCreateEnvironment called");
+		Console.WriteLine($"fileName: {fileName}");
+		Console.WriteLine($"selectedLanguage: {selectedLanguage}");
+		if (!string.IsNullOrWhiteSpace(fileName) && !string.IsNullOrEmpty(selectedLanguage))
+		{
+			var selectedExtension = (languages.First(lang => lang.languageName == selectedLanguage)).languageExtension;
+			var projectArgs = new ProjectCreatedEventArgs
+			{
+				FileName = fileName,
+				Language = selectedLanguage,
+				Extension = selectedExtension
+			};
+			await ProjectCreated.InvokeAsync(projectArgs);
+			Visible = false;
+			await VisibleChanged.InvokeAsync(Visible);
+
+		}
+		else
+		{
+			//TODO: Error messages
+		}
+	}
+}
+@code{
+	public class ProjectCreatedEventArgs
+    {
+        public string FileName { get; set; }
+		public string Language { get; set; }
+        public string Extension { get; set; }
+    }
+}
