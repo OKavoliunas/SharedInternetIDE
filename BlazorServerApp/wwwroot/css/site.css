@@ -2,7 +2,7 @@
 
 html, body {
     font-family: Roboto, Helvetica, Arial, sans-serif;
-    background-color: #0A0A23;
+    background-color: #122838;
     min-height: 100vh;
 }
 
@@ -18,10 +18,6 @@ a, .btn-link {
     color: #fff;
     background-color: #1b6ec2;
     border-color: #1861ac;
-}
-
-.content {
-    padding-top: 1.1rem;
 }
 
 .valid.modified:not([type=checkbox]) {
@@ -89,12 +85,7 @@ a, .btn-link {
 .modal-buttons button {
     margin-right: 10px;
 }
-.container {
-    max-width: 1536px;
-    margin-left: auto;
-    margin-right: auto;
-    padding-left: 0.5rem;
-}
+
 #login-form, #registration-form{
     background-color: #FCFCFC;
     max-width: 432px;
@@ -157,6 +148,186 @@ a, .btn-link {
     font-weight:600;
     z-index:2;
 }
+#landing-page {
+    min-height: 100vh;
+    display:flex;
+    flex-direction:column;
+}
+#top-nav-bar-container {
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-end;
+    margin: 0px;
+    margin-bottom:50px;
+}
+.landing-login-button {
+    border-radius: 10px;
+    background-color: #1C3140;
+    display: inline-block;
+    width: 200px;
+    height: 100px;
+    display: flex;
+    align-items: center;
+    
+}
+    .landing-login-button:hover {
+        background-color: #354855;
+        cursor:pointer;
+    }
+    .landing-login-button a {
+        color: white;
+        font-weight: 600;
+        font-size: 32px;
+        text-decoration: none;
+        width: 100%;
+        text-align: center;
+    }
+#sign-up-yes-no-button-container {
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-end;
+    margin: 0px;
+    margin-bottom: 50px;
+}
+
+.landing-signup-button {
+    border-radius: 10px;
+    background-color: #007ACC;
+    display: inline-block;
+    flex: 1;
+    width: 100%;
+    height: 100px;
+    display: flex;
+    align-items: center;
+    margin-right: 40px;
+    margin-left: 10%;
+}
+
+    .landing-signup-button:hover {
+        background-color: #003A61;
+        cursor: pointer;
+    }
+
+    .landing-signup-button a {
+        color: white;
+        font-weight: 600;
+        font-size: 32px;
+        text-decoration: none;
+        width: 100%;
+        text-align: center;
+    }
+.landing-proceed-without-signup-button {
+    border-radius: 10px;
+    background-color: #D9D9D9;
+    display: inline-block;
+    flex: 3;
+    width: 100%;
+    height: 100px;
+    display: flex;
+    align-items: center;
+    margin-right: 10%;
+}
+
+    .landing-proceed-without-signup-button:hover {
+        background-color: #7A7A7A;
+        cursor: pointer;
+    }
+    .landing-proceed-without-signup-button:hover a{
+        color: white;
+    }
+
+    .landing-proceed-without-signup-button a {
+        color: black;
+        font-weight: 600;
+        font-size: 32px;
+        text-decoration: none;
+        width: 100%;
+        text-align: center;
+    }
+
+#header-container h1{
+    text-align:center;
+    color: white;
+    font-size: 70px;
+    font-weight: 700; 
+}
+.container {
+    max-width: 1536px;
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 0.5rem;
+}
+@media(max-width: 1536px) {
+    .container {
+        max-width: 1280px;
+    }
+
+    #header-container h1 {
+        font-size: 60px;
+    }
+}
+@media(max-width: 1280px) {
+    .container {
+        max-width: 1024px;
+    }
+
+    #header-container h1 {
+        font-size: 48px;
+    }
+}
+@media(max-width: 1024px) {
+    .container {
+        max-width: 768px;
+    }
+
+    #header-container h1 {
+        font-size: 48px;
+    }
+    .landing-proceed-without-signup-button a {
+        font-size: 26px;
+    }
+    .landing-signup-button a {
+        font-size: 26px;
+    }
+}
+@media(max-width: 768px) {
+    .container {
+        max-width: 640px;
+    }
+
+    #header-container h1 {
+        font-size: 48px;
+    }
+    .landing-proceed-without-signup-button a {
+        font-size: 20px;
+    }
+
+    .landing-signup-button a {
+        font-size: 20px;
+    }
+}
+@media(max-width: 640px) {
+    .container {
+        max-width: 480px;
+    }
+
+    #login-form {
+        max-width: 100%;
+    }
+
+    #header-container h1 {
+        font-size: 48px;
+    }
+     .landing-proceed-without-signup-button {
+        flex:2;
+    }
+    .landing-proceed-without-signup-button a {
+        font-size: 18px;
+    }
+    .landing-signup-button a {
+        font-size: 18px;
+    }
+}
 @media(max-width: 480px) {
     .container {
         max-width:100%;
@@ -164,37 +335,19 @@ a, .btn-link {
     #login-form {
         max-width: 100%;
     }
-}
-@media(max-width: 640px) {
-    .container {
-        max-width: 480px;
+    #header-container h1 {
+        font-size: 40px;
     }
-    #login-form {
-        max-width: 100%;
+    .landing-proceed-without-signup-button {
+        flex: 2;
     }
-}
-@media(max-width: 768px) {
-    .container {
-        max-width: 640px;
+    .landing-proceed-without-signup-button a {
+        font-size: 18px;
     }
     
-}
-@media(max-width: 1024px) {
-    .container {
-        max-width: 768px;
+
+    .landing-signup-button a {
+        font-size: 18px;
     }
-    
 }
-@media(max-width: 1280px) {
-    .container {
-        max-width: 1024px;
-    }
-    
-}
-@media(max-width: 1536px) {
-    .container {
-        max-width: 1280px;
-    }
-    
-    
-}
+

@@ -47,8 +47,6 @@ public class LoginModel : PageModel
             return Page();
         }
         
-
-        // If we got this far, something failed; redisplay the form
         return Page();
     }
 
