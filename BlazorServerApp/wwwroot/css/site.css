@@ -1,7 +1,9 @@
 @import url('open-iconic/font/css/open-iconic-bootstrap.min.css');
 
 html, body {
-    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    font-family: Roboto, Helvetica, Arial, sans-serif;
+    background-color: #122838;
+    min-height: 100vh;
 }
 
 h1:focus {
@@ -16,10 +18,6 @@ a, .btn-link {
     color: #fff;
     background-color: #1b6ec2;
     border-color: #1861ac;
-}
-
-.content {
-    padding-top: 1.1rem;
 }
 
 .valid.modified:not([type=checkbox]) {
@@ -84,6 +82,272 @@ a, .btn-link {
     margin-top: 20px;
 }
 
-    .modal-buttons button {
-        margin-right: 10px;
+.modal-buttons button {
+    margin-right: 10px;
+}
+
+#login-form, #registration-form{
+    background-color: #FCFCFC;
+    max-width: 432px;
+    display: flex;
+    flex-direction: column;
+    padding-left: 70px;
+    padding-right: 70px;
+    padding-top: 150px;
+    flex: 1;
+}
+.login-field, .registration-field {
+    display:flex;
+    flex-direction: column;
+    position:relative;
+}
+    
+.login-field label, .registration-field label {
+    position: absolute;
+    top: 8px;
+    left: 16px;
+    z-index:2;
+    color:#3F3E4A;
+    font-size:10px;
+    font-weight:600;
+}
+.login-field input, .registration-field input {
+    max-width: 100%;
+    height: 24px;
+    padding-left: 16px;
+    padding-right: 48px;
+    padding-top: 26px;
+    padding-bottom: 8px;
+    margin-bottom: 25px;
+    background-color: #D9D9D9;
+    border-style: solid;
+    border-radius: 5px;
+    z-index:0;
+}
+.login-button, .register-button {
+    height: 67px;
+    width: 100%;
+    background-color: #007ACC;
+    color: #FFFFFF;
+    font-size: 36px;
+    font-weight: 600;
+    border:hidden;
+    border-radius: 5px;
+    margin-bottom: 15px;
+}
+    .login-button:hover, .register-button:hover {
+        background-color: #025b96;
+        cursor: pointer;
     }
+#login-page, #registration-page{
+    display:flex;
+    justify-content:center;
+    min-height:100vh;
+}
+.signup, .login {
+    font-weight:600;
+    z-index:2;
+}
+#landing-page {
+    min-height: 100vh;
+    display:flex;
+    flex-direction:column;
+}
+#top-nav-bar-container {
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-end;
+    margin: 0px;
+    margin-bottom:50px;
+}
+.landing-login-button {
+    border-radius: 10px;
+    background-color: #1C3140;
+    display: inline-block;
+    width: 200px;
+    height: 100px;
+    display: flex;
+    align-items: center;
+    
+}
+    .landing-login-button:hover {
+        background-color: #354855;
+        cursor:pointer;
+    }
+    .landing-login-button a {
+        color: white;
+        font-weight: 600;
+        font-size: 32px;
+        text-decoration: none;
+        width: 100%;
+        text-align: center;
+    }
+#sign-up-yes-no-button-container {
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-end;
+    margin: 0px;
+    margin-bottom: 50px;
+}
+
+.landing-signup-button {
+    border-radius: 10px;
+    background-color: #007ACC;
+    display: inline-block;
+    flex: 1;
+    width: 100%;
+    height: 100px;
+    display: flex;
+    align-items: center;
+    margin-right: 40px;
+    margin-left: 10%;
+}
+
+    .landing-signup-button:hover {
+        background-color: #003A61;
+        cursor: pointer;
+    }
+
+    .landing-signup-button a {
+        color: white;
+        font-weight: 600;
+        font-size: 32px;
+        text-decoration: none;
+        width: 100%;
+        text-align: center;
+    }
+.landing-proceed-without-signup-button {
+    border-radius: 10px;
+    background-color: #D9D9D9;
+    display: inline-block;
+    flex: 3;
+    width: 100%;
+    height: 100px;
+    display: flex;
+    align-items: center;
+    margin-right: 10%;
+}
+
+    .landing-proceed-without-signup-button:hover {
+        background-color: #7A7A7A;
+        cursor: pointer;
+    }
+    .landing-proceed-without-signup-button:hover a{
+        color: white;
+    }
+
+    .landing-proceed-without-signup-button a {
+        color: black;
+        font-weight: 600;
+        font-size: 32px;
+        text-decoration: none;
+        width: 100%;
+        text-align: center;
+    }
+
+#header-container h1{
+    text-align:center;
+    color: white;
+    font-size: 70px;
+    font-weight: 700; 
+}
+.container {
+    max-width: 1536px;
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 0.5rem;
+}
+@media(max-width: 1536px) {
+    .container {
+        max-width: 1280px;
+    }
+
+    #header-container h1 {
+        font-size: 60px;
+    }
+}
+@media(max-width: 1280px) {
+    .container {
+        max-width: 1024px;
+    }
+
+    #header-container h1 {
+        font-size: 48px;
+    }
+}
+@media(max-width: 1024px) {
+    .container {
+        max-width: 768px;
+    }
+
+    #header-container h1 {
+        font-size: 48px;
+    }
+    .landing-proceed-without-signup-button a {
+        font-size: 26px;
+    }
+    .landing-signup-button a {
+        font-size: 26px;
+    }
+}
+@media(max-width: 768px) {
+    .container {
+        max-width: 640px;
+    }
+
+    #header-container h1 {
+        font-size: 48px;
+    }
+    .landing-proceed-without-signup-button a {
+        font-size: 20px;
+    }
+
+    .landing-signup-button a {
+        font-size: 20px;
+    }
+}
+@media(max-width: 640px) {
+    .container {
+        max-width: 480px;
+    }
+
+    #login-form {
+        max-width: 100%;
+    }
+
+    #header-container h1 {
+        font-size: 48px;
+    }
+     .landing-proceed-without-signup-button {
+        flex:2;
+    }
+    .landing-proceed-without-signup-button a {
+        font-size: 18px;
+    }
+    .landing-signup-button a {
+        font-size: 18px;
+    }
+}
+@media(max-width: 480px) {
+    .container {
+        max-width:100%;
+    }
+    #login-form {
+        max-width: 100%;
+    }
+    #header-container h1 {
+        font-size: 40px;
+    }
+    .landing-proceed-without-signup-button {
+        flex: 2;
+    }
+    .landing-proceed-without-signup-button a {
+        font-size: 18px;
+    }
+    
+
+    .landing-signup-button a {
+        font-size: 18px;
+    }
+}
+
