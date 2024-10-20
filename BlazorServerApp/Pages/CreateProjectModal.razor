@@ -53,9 +53,6 @@
 
 	private async Task OnCreateEnvironment()
 	{
-		Console.WriteLine("OnCreateEnvironment called");
-		Console.WriteLine($"fileName: {fileName}");
-		Console.WriteLine($"selectedLanguage: {selectedLanguage}");
 		if (!string.IsNullOrWhiteSpace(fileName) && !string.IsNullOrEmpty(selectedLanguage))
 		{
 			var selectedExtension = (languages.First(lang => lang.languageName == selectedLanguage)).languageExtension;

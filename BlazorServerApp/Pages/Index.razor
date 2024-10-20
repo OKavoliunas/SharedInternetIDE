@@ -54,18 +54,8 @@
 		try
 		{
 			var authState = await authenticationStateProvider.GetAuthenticationStateAsync();
-			if (authState == null)
-			{
-				Console.WriteLine("authState is null");
-				return;
-			}
 
 			var user = authState.User;
-			if (user == null)
-			{
-				Console.WriteLine("user is null");
-				return;
-			}
 
 			if (user.Identity == null || !user.Identity.IsAuthenticated)
 			{
@@ -74,29 +64,13 @@
 			}
 
 			string userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
-			if (string.IsNullOrEmpty(userId))
-			{
-				Console.WriteLine("userId is null or empty");
-				return;
-			}
-
-			if (args == null)
-			{
-				Console.WriteLine("args is null");
-				return;
-			}
-
-			if (string.IsNullOrEmpty(args.FileName))
-			{
-				Console.WriteLine("args.FileName is null or empty");
-				return;
-			}
 
 			var projectId = await projectService.CreateProjectInDatabaseAsync(userId, args.FileName);
-			await userFileService.CreateProjectDirectoriesAsync(userId, projectId);
 
-			string fileContent = "";
+			// Creates the default project categories
+			await userFileService.CreateDefaultProjectDirectoriesAsync(userId, projectId);
 
+			await userFileService.CreateFile(userId, projectId, args.FileName, args.Extension);
 
 
 			navigationManager.NavigateTo($"/Project/{projectId}");

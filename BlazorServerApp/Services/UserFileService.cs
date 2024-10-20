@@ -10,11 +10,10 @@ namespace BlazorServerApp.Services
             basePath = configuration["FileStorage:Basepath"] ?? "D:/CompilerApp/StoredFiles";
             
         }
-        public async Task CreateProjectDirectoriesAsync(string userId, int projectId) 
+        public async Task CreateDefaultProjectDirectoriesAsync(string userId, int projectId) 
         {
             if(string.IsNullOrEmpty(userId))
                 throw new ArgumentNullException(nameof(userId));
-
             string projectDirectoryPath = GetProjectDirectoryPath(userId, projectId);
 
             if (!Directory.Exists(projectDirectoryPath)) 
@@ -30,6 +29,23 @@ namespace BlazorServerApp.Services
                     Directory.CreateDirectory(subDirPath);
                 }
             }
+            await Task.CompletedTask;
+        }
+        public async Task CreateFile(string userId, int projectId, string fileName, string fileExtension, string directory = "") 
+        {
+            if (string.IsNullOrEmpty(userId))
+                throw new ArgumentNullException(nameof(userId));
+
+            string projectDirectory = GetProjectDirectoryPath(userId,projectId);
+            const string sourceCodeDirectory = "SourceCode";
+            
+            string fullFilePath = Path.Combine(projectDirectory,sourceCodeDirectory,directory) + "\\" + fileName + fileExtension;
+
+            if (File.Exists(fullFilePath))
+                Console.WriteLine("A file with that name already exists in this directory");    
+            if (!File.Exists(fullFilePath))
+                File.Create(fullFilePath);
+
             await Task.CompletedTask;
         }
         public string GetProjectDirectoryPath(string userId, int projectId)
