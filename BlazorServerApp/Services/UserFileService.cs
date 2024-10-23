@@ -54,5 +54,43 @@ namespace BlazorServerApp.Services
             string projectDirectoryName = "Project_" + projectId;
             return Path.Combine(basePath, userDirectoryName, projectDirectoryName);
         }
+        public async Task<int> DeleteProjectDirectoriesAsync(string userId, int projectId)
+        {
+            const int SUCCESS = 0;
+            const int DIRNOTFOUND = 1;
+            const int ERRORDELETING = 2;
+            const int USERIDNULLOREMPTY = 3;
+
+            const bool DELETESUBDIRECTORIES = true;
+            if (string.IsNullOrEmpty(userId))
+            {
+                throw new ArgumentNullException(nameof(userId));
+                return USERIDNULLOREMPTY;
+            }
+            string projectDirectoryPath = GetProjectDirectoryPath(userId, projectId);
+            try 
+            {
+                if (Directory.Exists(projectDirectoryPath))
+                {
+                    foreach (var file in Directory.GetFiles(projectDirectoryPath))
+                {
+                    File.Delete(file);
+                }
+                    await Task.Run(() => Directory.Delete(projectDirectoryPath, DELETESUBDIRECTORIES));
+                    return SUCCESS;
+                }
+                else
+                {
+                    Console.WriteLine($"Project directory not found: {projectDirectoryPath}");
+                    return DIRNOTFOUND;
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error deleting project directory: {ex.Message}");
+                return ERRORDELETING;
+            }
+        }
+        
     }
 }
