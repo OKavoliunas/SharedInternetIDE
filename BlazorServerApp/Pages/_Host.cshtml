@@ -7,3 +7,11 @@
 
 <component type="typeof(App)" render-mode="ServerPrerendered" />
 <script src="_framework/blazor.server.js"></script>
+
+<script>
+    window.registerClickOutside = function (dotNetHelper) {
+        document.addEventListener('click', function onClickOutside(event) {
+            dotNetHelper.invokeMethodAsync('OnClickOutside', event.target.id);
+        });
+    };
+</script>
