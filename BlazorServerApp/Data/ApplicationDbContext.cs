@@ -24,6 +24,9 @@ namespace BlazorServerApp.Data
                 entity.Property(e => e.Name)
                       .IsRequired()
                       .HasMaxLength(255);
+                entity.Property(e => e.Language)
+                      .IsRequired()
+                      .HasMaxLength(255);
 
                 entity.Property(e => e.Description)
                       .IsRequired(false);
