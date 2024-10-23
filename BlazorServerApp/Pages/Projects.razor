@@ -1,0 +1,244 @@
+﻿@page "/projects"
+@attribute [Authorize]
+@inject AuthenticationStateProvider authenticationStateProvider
+@inject ProjectDbService projectDbService
+@inject NavigationManager navigationManager
+@inject ProjectManagementService projectManagementService
+@inject IJSRuntime JSRuntime
+@implements IDisposable
+@using System.Security.Claims
+@using BlazorServerApp.Models
+@using BlazorServerApp.Services
+
+<div @onclick:stopPropagation="false" @onclick="CloseAllMenus">
+	<div class="container projects-header-container" >
+		<div class="container all-projects-title">
+			<div class="icon">
+				<svg class="w-6 h-6 text-gray-800 dark:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
+				  <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 19V6a1 1 0 0 1 1-1h4.032a1 1 0 0 1 .768.36l1.9 2.28a1 1 0 0 0 .768.36H16a1 1 0 0 1 1 1v1M3 19l3-8h15l-3 8H3Z"/>
+				</svg>
+			</div>
+			<div class="title">
+				<h1>All projects</h1>
+			</div>
+		</div>
+		<div class="new-project">
+			<button class="new-project-button" @onclick="OpenCreateModal">
+				<div class="icon">
+					<svg class="w-6 h-6 text-gray-800 dark:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
+					  <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14m-7 7V5"/>
+					</svg>
+				</div>
+				<div class="title">
+					<h1>New project</h1>
+				</div>
+			</button>
+		</div>
+	</div>
+	<div class="container projects" >
+		<ul>
+			@foreach(var project in projects)
+			{	
+				<li class="container project-list-entry">
+					<a href="/project/@project.ProjectID.ToString()" class="project-link">
+						<div class="project-content">
+							@switch(project.Language)
+							{
+								case "Java":
+									<img class="icon" src="images/java_logo.svg" alt="Java programming language"/>
+									break;
+								case "C":
+									<img class="icon" src="images/c_logo.svg" alt="C programming language"/>
+									break;
+								case "C++":
+									<img class="icon" src="images/cpp_logo.svg" alt="C++ programming language"/>
+									break;
+								default:
+									<p>Something went wrong while trying to display the language</p>
+									break;
+							}
+							<div class="project-info">
+								<div class="project-name">@project.Name</div>
+								<div class="project-creation-date">@project.CreationDate.ToLocalTime()</div>
+							</div>
+						</div>
+					</a>
+					<div class="info-button">
+						<button @onclick:stopPropagation="true" @onclick="() => ToggleMenu(project.ProjectID)">
+							<div>
+								<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-labelledby="verticalTripleDotSinglePathTitle" role="img">
+									<title id="verticalTripleDotSinglePathTitle-@project.ProjectID">Vertical Triple Dot</title><path d="M12 6 m-2,0 a2,2 0 1,0 4,0 a2,2 0 1,0 -4,0 M12 12 m-2,0 a2,2 0 1,0 4,0 a2,2 0 1,0 -4,0 M12 18 m-2,0 a2,2 0 1,0 4,0 a2,2 0 1,0 -4,0" fill="white"/>
+								</svg>
+							</div>
+						</button>
+						@if (visibleMenus.Contains(project.ProjectID))
+						{
+							<div class="dropdown-menu">
+								<button @onclick="() => OpenEditModal(project)">Edit</button>
+								<button @onclick="() => OpenDeleteModal(project)">Delete</button>
+							</div>
+						}
+					</div>
+				</li>
+			}
+		</ul>
+	</div>
+		@if (isCreateModalVisible)
+		{
+			<div class="modal-backdrop">
+				<div class="modal">
+					<CreateProjectModal @bind-Visible="isCreateModalVisible" ProjectCreated="OnProjectCreated" />
+				</div>
+			</div>
+		}
+		@if (isEditModalVisible)
+		{
+			<div class="modal-backdrop">
+				<div class="modal">
+					<UpdateProjectNameModal Visible="isEditModalVisible" VisibleChanged="@(value => isEditModalVisible = value)" Project="selectedProject" OnProjectNameUpdated="OnProjectNameUpdated" />
+				</div>
+			</div>
+		}
+		@if (isDeleteModalVisible)
+		{
+			<div class="modal-backdrop">
+				<div class="modal">
+					<ConfirmProjectDeletionModal Visible="isDeleteModalVisible" VisibleChanged="@(value => isDeleteModalVisible = value)" Project="selectedProject" OnProjectDeleted="OnProjectDeleted" />
+				</div>
+			</div>
+		}
+
+	
+</div>
+@code 
+{
+
+	private List<Project> projects = new List<Project>();
+	private HashSet<int> visibleMenus = new HashSet<int>();
+
+	private bool isEditModalVisible = false;
+	private bool isDeleteModalVisible = false;
+	private bool isCreateModalVisible = false;
+
+	private DotNetObjectReference<HashSet<int>> dotNetRef;
+	private Project selectedProject;
+	protected override async Task OnInitializedAsync()
+	{
+		var authState = await authenticationStateProvider.GetAuthenticationStateAsync();
+		var user = authState.User;
+		if (user.Identity != null && user.Identity.IsAuthenticated)
+		{
+			var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
+			if (string.IsNullOrWhiteSpace(userId))
+				throw new ArgumentNullException(nameof(userId));
+			else
+				projects = await projectDbService.GetProjectsByUserIdAsync(userId) ?? new List<Project>();
+
+		}
+		else
+		{
+			navigationManager.NavigateTo("/login");
+		}
+
+	}
+
+	protected override async Task OnAfterRenderAsync(bool firstRender)
+	{
+		if (firstRender)
+		{
+			await JSRuntime.InvokeVoidAsync("registerClickOutside", DotNetObjectReference.Create(this));
+		}
+	}
+	public void Dispose()
+	{
+		dotNetRef?.Dispose();
+	}
+
+
+	private void ToggleMenu(int projectId)
+	{
+		Console.WriteLine($"ToggleMenu was called with the params projectId: {projectId}");
+		if (visibleMenus.Contains(projectId))
+		{
+			visibleMenus.Remove(projectId);
+		}
+		else
+		{
+			CloseAllMenus();
+			visibleMenus.Add(projectId);
+		}
+	}
+
+	private void CloseAllMenus()
+	{
+		visibleMenus.Clear();
+	}
+
+
+	private void OpenCreateModal()
+	{
+		isCreateModalVisible = true;
+	}
+	private void OpenEditModal(Project project)
+	{
+		selectedProject = project;
+		isEditModalVisible = true;
+		visibleMenus.Clear();
+	}
+
+	private void OpenDeleteModal(Project project)
+	{
+		selectedProject = project;
+		isDeleteModalVisible = true;
+		visibleMenus.Clear();
+	}
+
+	private async Task OnProjectCreated(CreateProjectModal.ProjectCreatedEventArgs args)
+	{
+		try
+		{
+			int projectId = await projectManagementService.CreateProjectAsync(args);
+			if (projectId >= 0)
+			{
+				navigationManager.NavigateTo($"/project/{projectId}");
+			}
+			else if (projectId == -1)
+			{
+				navigationManager.NavigateTo("/login");
+			}
+			else
+			{
+				Console.WriteLine("Error creating project");
+			}
+		}
+		catch (Exception ex)
+		{
+			Console.WriteLine($"Error creating project: {ex.Message}");
+		}
+		finally
+		{
+			isCreateModalVisible = false;
+		}
+	}
+	private async Task OnProjectNameUpdated(Project updatedProject)
+	{
+		var authState = await authenticationStateProvider.GetAuthenticationStateAsync();
+		var user = authState.User;
+
+		var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
+
+		await projectDbService.UpdateProjectNameInDatabaseAsync(userId, updatedProject.ProjectID, updatedProject.Name);
+
+		projects = await projectDbService.GetProjectsByUserIdAsync(userId) ?? new List<Project>();
+	}
+	private async Task OnProjectDeleted(int projectId)
+	{
+		await projectManagementService.DeleteProjectAsync(projectId);
+		//Refresh the project list after deleting the project
+		var authState = await authenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+		var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
+		projects = await projectDbService.GetProjectsByUserIdAsync(userId) ?? new List<Project>();
+	}
+}

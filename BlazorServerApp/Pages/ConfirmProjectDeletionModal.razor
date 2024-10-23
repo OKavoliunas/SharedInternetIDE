@@ -1,0 +1,51 @@
+﻿@using Microsoft.AspNetCore.Components
+@using BlazorServerApp.Models
+
+@if (Visible)
+{
+    <div class="modal-backdrop">
+        <div class="modal">
+            <h3>Delete Project</h3>
+            <div class="modal-body">
+                <p>Are you sure you want to delete the project "<strong>@Project.Name</strong>"?</p>
+            </div>
+            <div class="modal-buttons">
+                <button @onclick="OnCancel">Cancel</button>
+                <button @onclick="OnConfirmDelete">Delete</button>
+            </div>
+        </div>
+    </div>
+}
+@code {
+    [Parameter]
+    public bool Visible { get; set; }
+
+    [Parameter]
+    public EventCallback<bool> VisibleChanged { get; set; }
+
+    [Parameter]
+    public Project Project { get; set; }
+
+    [Parameter]
+    public EventCallback<int> OnProjectDeleted { get; set; }
+
+    private async Task OnConfirmDelete()
+    {
+        if (Project != null)
+        {
+            await OnProjectDeleted.InvokeAsync(Project.ProjectID);
+            await CloseModalAsync();
+        }
+    }
+
+    private async Task OnCancel()
+    {
+        await CloseModalAsync();
+    }
+
+    private async Task CloseModalAsync()
+    {
+        Visible = false;
+        await VisibleChanged.InvokeAsync(Visible);
+    }
+}

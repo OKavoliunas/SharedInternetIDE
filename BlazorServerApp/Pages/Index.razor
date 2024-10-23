@@ -4,8 +4,7 @@
 @using Microsoft.AspNetCore.Authorization
 @attribute [Authorize]
 @inject AuthenticationStateProvider authenticationStateProvider
-@inject ProjectService projectService
-@inject UserFileService userFileService
+@inject ProjectManagementService projectManagementService
 @inject NavigationManager navigationManager
 
 <PageTitle>Index</PageTitle>
@@ -30,9 +29,9 @@
 		<div class="list-of-recent-envs">
 
 		</div>
-		<button class="see-all-envs">
+		<a class="see-all-envs" href="/projects">
 			See all environments
-		</button>
+		</a>
 	</div>
 
 
@@ -50,38 +49,29 @@
 	}
 	private async Task HandleProjectCreated(CreateProjectModal.ProjectCreatedEventArgs args)
 	{
-		Console.WriteLine("HandleProjectCreated called");
 		try
 		{
-			var authState = await authenticationStateProvider.GetAuthenticationStateAsync();
-
-			var user = authState.User;
-
-			if (user.Identity == null || !user.Identity.IsAuthenticated)
+			int projectId = await projectManagementService.CreateProjectAsync(args);
+			if (projectId >= 0)
 			{
-				Console.WriteLine("User is not authenticated");
-				return;
+				navigationManager.NavigateTo($"/project/{projectId}");
 			}
-
-			string userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
-
-			var projectId = await projectService.CreateProjectInDatabaseAsync(userId, args.FileName);
-
-			// Creates the default project categories
-			await userFileService.CreateDefaultProjectDirectoriesAsync(userId, projectId);
-
-			await userFileService.CreateFile(userId, projectId, args.FileName, args.Extension);
-
-
-			navigationManager.NavigateTo($"/Project/{projectId}");
+			else if (projectId == -1)
+			{
+				navigationManager.NavigateTo("/login");
+			}
+			else
+			{
+				Console.WriteLine("Error creating project");
+			}
 		}
 		catch (Exception ex)
 		{
 			Console.WriteLine($"Error creating project: {ex.Message}");
 		}
+		finally
+		{
+			isModalVisible = false;
+		}
 	}
-	/*private async Task<int> CreateProjectInDatabaseAsync(string userId, string projectName)
-	{
-		
-	}*/
 }
