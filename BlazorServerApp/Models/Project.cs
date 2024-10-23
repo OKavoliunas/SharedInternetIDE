@@ -19,7 +19,10 @@ namespace BlazorServerApp.Models
         [Required]
         [StringLength(255)]
         public string Name { get; set; }
-
+        
+        [Required]
+        [MaxLength(255)]
+        public string Language { get; set; }
         public string Description { get; set; }
 
         [Required]
