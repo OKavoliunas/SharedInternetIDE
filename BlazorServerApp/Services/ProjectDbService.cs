@@ -7,12 +7,19 @@ namespace BlazorServerApp.Services
 {
     public class ProjectDbService
     {
+
         private readonly ApplicationDbContext applicationDbContext;
-        public ProjectDbService(ApplicationDbContext applicationDbContext) 
+        public ProjectDbService(ApplicationDbContext applicationDbContext)
         {
             this.applicationDbContext = applicationDbContext;
         }
-        public async Task<int> CreateProjectInDatabaseAsync(string userId, string projectName, string language, string? description = null) 
+
+        public ProjectDbService()
+        {
+            applicationDbContext = new ApplicationDbContext();
+        }
+
+        public async Task<int> CreateProjectInDatabaseAsync(string userId, string projectName, string language, string? description = null)
         {
             if (string.IsNullOrWhiteSpace(userId))
                 throw new ArgumentNullException(nameof(userId));
@@ -27,11 +34,19 @@ namespace BlazorServerApp.Services
                 Description = description,
                 CreationDate = DateTime.UtcNow
             };
-            
+
             applicationDbContext.Add(project);
             await applicationDbContext.SaveChangesAsync();
 
             return project.ProjectID;
+        }
+        public async Task<bool> IsProjectOwnedByUser(string userId, int projectId) 
+        {
+            Project project = await GetProjectById(projectId);
+            if (project.UserID == userId)
+                return true;
+            else
+                return false;
         }
         public async Task<List<Project>> GetProjectsByUserIdAsync(string userId) 
         {
@@ -41,6 +56,14 @@ namespace BlazorServerApp.Services
                 .Where(p => p.UserID == userId)
                 .OrderByDescending(p => p.CreationDate)
                 .ToListAsync();
+        }
+        public async Task<Project> GetProjectById(int projectId) 
+        { 
+            var project = await applicationDbContext.Projects
+                .FirstOrDefaultAsync(p => p.ProjectID == projectId);
+            if (project == null)
+                throw new KeyNotFoundException($"Project with ID {projectId} was not found");
+            return project;
         }
         public async Task UpdateProjectNameInDatabaseAsync(string userId, int projectId, string newProjectName)
         {
