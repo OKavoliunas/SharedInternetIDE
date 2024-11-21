@@ -1,13 +1,14 @@
 ﻿using System.IO;
 using System.Threading.Tasks;
+using BlazorServerApp.Services;
 namespace BlazorServerApp.Services
 {
     public class UserFileService
     {
-        private readonly string basePath;
+        private readonly string BASE_PATH;
         public UserFileService(IConfiguration configuration) 
         {
-            basePath = configuration["FileStorage:Basepath"] ?? "D:/CompilerApp/StoredFiles";
+            BASE_PATH = configuration["FileStorage:Basepath"] ?? "D:/CompilerApp/StoredFiles";
             
         }
         public async Task CreateDefaultProjectDirectoriesAsync(string userId, int projectId) 
@@ -52,7 +53,76 @@ namespace BlazorServerApp.Services
         {
             string userDirectoryName = "User_" + userId;
             string projectDirectoryName = "Project_" + projectId;
-            return Path.Combine(basePath, userDirectoryName, projectDirectoryName);
+          
+            return Path.Combine(BASE_PATH, userDirectoryName, projectDirectoryName); ;
+        }
+        public async Task<List<String>> GetProjectFileNames(string userId, int projectId) 
+        {
+            List<String> fileNames = new List<String>();
+            ProjectDbService projectDbService = new ProjectDbService();
+            if (await projectDbService.IsProjectOwnedByUser(userId, projectId))
+            {
+                string projectDirectory = GetProjectDirectoryPath(userId, projectId);
+
+                try
+                {
+                    if (Directory.Exists(projectDirectory))
+                    {
+                        var files = await Task.Run(() => Directory.GetFiles(projectDirectory));
+                        foreach (var file in files)
+                        {
+                            string fileName = await Task.Run(() => Path.GetFileName(file));
+                            fileNames.Add(fileName);
+                        }
+                    }
+                    else
+                    {
+                        Console.WriteLine($"Project directory not found: {projectDirectory}");
+                    }
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine($"Error retrieving project file names: {e.Message}");
+                }
+
+            }
+            else 
+            {
+                Console.WriteLine($"User with UserId: {userId}  doesn't own project with ProjectId: {projectId}");
+            }
+            return fileNames;
+        }
+        public async Task<string> GetFileContentAsync(string userId,int projectId, string fileName) 
+        {
+            ProjectDbService projectDbService = new ProjectDbService();
+
+            if (await projectDbService.IsProjectOwnedByUser(userId, projectId))
+            {
+                string projectDirectoryPath = GetProjectDirectoryPath(userId, projectId);
+                string filePath = Path.Combine(projectDirectoryPath, fileName);
+                try
+                {
+                    if (File.Exists(filePath))
+                    {
+                        return await File.ReadAllTextAsync(filePath);
+                    }
+                    else
+                    {
+                        Console.WriteLine($"File not found {filePath}");
+                        return string.Empty;
+                    }
+                }
+                catch (Exception ex) 
+                {
+                    Console.WriteLine($"Error reading file: {ex.Message}");
+                }
+                return string.Empty;
+            }
+            else 
+            {
+                Console.WriteLine($"User with UserId: {userId}  doesn't own project with ProjectId: {projectId}");
+            }
+            return string.Empty;
         }
         public async Task<int> DeleteProjectDirectoriesAsync(string userId, int projectId)
         {
@@ -73,9 +143,9 @@ namespace BlazorServerApp.Services
                 if (Directory.Exists(projectDirectoryPath))
                 {
                     foreach (var file in Directory.GetFiles(projectDirectoryPath))
-                {
-                    File.Delete(file);
-                }
+                    {
+                        File.Delete(file);
+                    }
                     await Task.Run(() => Directory.Delete(projectDirectoryPath, DELETESUBDIRECTORIES));
                     return SUCCESS;
                 }
