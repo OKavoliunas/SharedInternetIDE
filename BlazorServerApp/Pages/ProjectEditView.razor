@@ -1,0 +1,66 @@
+﻿@page "/project/{projectId:int}"
+@inject ProjectDbService projectDbService
+@inject AuthenticationStateProvider authenticationStateProvider
+@inject UserFileService userFileService
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.Security.Claims
+@using BlazorServerApp.Services
+@using BlazorServerApp.Models
+<CodeEditor @bind-CodeContent="codeContent" Language="@language"/>
+@code {
+	[Parameter]
+	public int projectId { get; set; }
+
+	private string codeContent;
+	private Project currentProject;
+	private string language;
+
+	protected override async Task OnInitializedAsync()
+	{
+		var authState = await authenticationStateProvider.GetAuthenticationStateAsync();
+		var user = authState.User;
+		var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
+
+
+		if (await projectDbService.IsProjectOwnedByUser(userId, projectId))
+		{
+			string selectedFileName = "";
+			currentProject = await projectDbService.GetProjectById(projectId);
+			List<string> fileNames = await userFileService.GetProjectFileNames(userId,projectId);
+			bool isFirst = true;
+			foreach (string	fileName in fileNames)
+			{
+				if (isFirst)
+				{
+					selectedFileName = fileName;
+					isFirst = false;	
+				}
+				if (fileName == currentProject.Name + GetExtension(currentProject))
+					selectedFileName = fileName;
+
+			}
+			if (!string.IsNullOrEmpty(selectedFileName))
+			{
+				language = currentProject.Language;
+
+				codeContent = await userFileService.GetFileContentAsync(userId, projectId, selectedFileName);
+			}
+		}
+			
+		else
+		{
+			//TODO: Redirect to a page for no authorization
+		}
+
+	}
+	private string GetExtension(Project project)
+	{
+		return project.Language switch
+		{
+			"Java" => ".java",
+			"C" => ".c",
+			"C++" => ".cpp",
+			_ => "."
+		};
+	}
+}

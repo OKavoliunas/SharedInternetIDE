@@ -1,0 +1,57 @@
+﻿@using Microsoft.AspNetCore.Components
+@using BlazorMonaco
+@using BlazorMonaco.Editor
+@using BlazorMonaco.Languages
+@implements IDisposable
+
+<StandaloneCodeEditor @ref="standaloneEditor" @bind-Value="CodeContent" Options="editorOptions" Theme="vs-dark" @onDidChangeModelContent="OnInput"/>
+@code {
+	[Parameter]
+	public string CodeContent { get; set; }
+
+	[Parameter]
+	public EventCallback<string> CodeContentChanged { get; set; }
+
+	[Parameter]
+	public string Language { get; set; }
+
+	private StandaloneCodeEditor standaloneEditor;
+	private StandaloneEditorConstructionOptions editorOptions;
+
+	private string EditorLanguage => GetMonacoLanguage(Language);
+
+	private Timer debounceTimer;
+	protected override void OnInitialized()
+	{
+		editorOptions = new StandaloneEditorConstructionOptions
+			{
+				Language = GetMonacoLanguage(Language),
+				AutomaticLayout = true
+			};
+	}
+	private void OnInput()
+	{
+		const int SECOND_MS = 1000;
+		debounceTimer?.Dispose();
+		debounceTimer = new Timer(SaveCode, null, 1 * SECOND_MS, Timeout.Infinite);
+	}
+	private async void SaveCode(object state)
+	{
+		CodeContent = await standaloneEditor.GetValue();
+		await CodeContentChanged.InvokeAsync(CodeContent);
+	}
+	private string GetMonacoLanguage(string language)
+	{
+		return language switch
+		{
+			"Java" => "java",
+			"C++" => "cpp",
+			"C" => "c",
+			_ => "plaintext"
+		};
+	}
+	public void Dispose()
+	{
+		debounceTimer?.Dispose();
+	}
+}
