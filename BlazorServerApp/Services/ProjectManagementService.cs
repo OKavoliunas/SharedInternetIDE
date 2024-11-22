@@ -39,33 +39,28 @@ namespace BlazorServerApp.Services
 
             return projectId;
         }
-        public async Task<int> DeleteProjectAsync(int projectId)
+        public async Task DeleteProjectAsync(int projectId)
         {
-            const int SUCCESS = 0;
-            const int FAILURE = 1;
-            var authState = await authenticationStateProvider.GetAuthenticationStateAsync();
-            var user = authState.User;
-            if (user.Identity == null || !user.Identity.IsAuthenticated)
+            try 
             {
-                Console.WriteLine("User is not authenticated");
-                return FAILURE;
+                var authState = await authenticationStateProvider.GetAuthenticationStateAsync();
+                var user = authState.User;
+                if (user.Identity == null || !user.Identity.IsAuthenticated)
+                {
+                    throw new KeyNotFoundException("The user is not authenticated");
+                }
+                string userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
+                if (string.IsNullOrEmpty(userId))
+                {
+                    throw new ArgumentNullException(nameof(userId));
+                }
+                await projectDbService.DeleteProjectFromDatabaseAsync(userId, projectId);
+                await userFileService.DeleteProjectDirectoriesAsync(userId, projectId);
             }
-            string userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (string.IsNullOrEmpty(userId))
+            catch (Exception ex) 
             {
-                Console.WriteLine("User ID is null or empty");
-                return FAILURE;
+                throw ex;
             }
-            var result = await projectDbService.DeleteProjectFromDatabaseAsync(userId, projectId);
-            if (result == SUCCESS)
-            {
-                return await userFileService.DeleteProjectDirectoriesAsync(userId, projectId);
-            }
-            else 
-            {
-                return FAILURE;
-            }
-
         }
     }
 }

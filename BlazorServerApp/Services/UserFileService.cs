@@ -1,15 +1,17 @@
 ﻿using System.IO;
 using System.Threading.Tasks;
 using BlazorServerApp.Services;
+
 namespace BlazorServerApp.Services
 {
     public class UserFileService
     {
         private readonly string BASE_PATH;
-        public UserFileService(IConfiguration configuration) 
+        private readonly ProjectDbService projectDbService;
+        public UserFileService(IConfiguration configuration, ProjectDbService projectDbService) 
         {
             BASE_PATH = configuration["FileStorage:Basepath"] ?? "D:/CompilerApp/StoredFiles";
-            
+            this.projectDbService = projectDbService ?? throw new ArgumentNullException(nameof(projectDbService));
         }
         public async Task CreateDefaultProjectDirectoriesAsync(string userId, int projectId) 
         {
@@ -17,18 +19,25 @@ namespace BlazorServerApp.Services
                 throw new ArgumentNullException(nameof(userId));
             string projectDirectoryPath = GetProjectDirectoryPath(userId, projectId);
 
-            if (!Directory.Exists(projectDirectoryPath)) 
+            try
             {
-                Directory.CreateDirectory(projectDirectoryPath);
-            }
-            string[] subDirs = { "SourceCode", "Inputs", "Outputs", "Logs" };
-            foreach (string subDir in subDirs) 
-            {
-                string subDirPath = Path.Combine(projectDirectoryPath, subDir);
-                if (!Directory.Exists(subDirPath)) 
+                if (!Directory.Exists(projectDirectoryPath)) 
                 {
-                    Directory.CreateDirectory(subDirPath);
+                    Directory.CreateDirectory(projectDirectoryPath);
                 }
+                string[] subDirs = { "SourceCode", "Inputs", "Outputs", "Logs" };
+                foreach (string subDir in subDirs)
+                {
+                    string subDirPath = Path.Combine(projectDirectoryPath, subDir);
+                    if (!Directory.Exists(subDirPath))
+                    {
+                        Directory.CreateDirectory(subDirPath);
+                    }
+                }
+            }
+            catch (Exception ex) 
+            {
+                throw ex;
             }
             await Task.CompletedTask;
         }
@@ -59,7 +68,6 @@ namespace BlazorServerApp.Services
         public async Task<List<String>> GetProjectFileNames(string userId, int projectId) 
         {
             List<String> fileNames = new List<String>();
-            ProjectDbService projectDbService = new ProjectDbService();
             if (await projectDbService.IsProjectOwnedByUser(userId, projectId))
             {
                 string projectDirectory = GetProjectDirectoryPath(userId, projectId);
@@ -94,8 +102,6 @@ namespace BlazorServerApp.Services
         }
         public async Task<string> GetFileContentAsync(string userId,int projectId, string fileName) 
         {
-            ProjectDbService projectDbService = new ProjectDbService();
-
             if (await projectDbService.IsProjectOwnedByUser(userId, projectId))
             {
                 string projectDirectoryPath = GetProjectDirectoryPath(userId, projectId);
@@ -124,18 +130,13 @@ namespace BlazorServerApp.Services
             }
             return string.Empty;
         }
-        public async Task<int> DeleteProjectDirectoriesAsync(string userId, int projectId)
+        public async Task DeleteProjectDirectoriesAsync(string userId, int projectId)
         {
-            const int SUCCESS = 0;
-            const int DIRNOTFOUND = 1;
-            const int ERRORDELETING = 2;
-            const int USERIDNULLOREMPTY = 3;
 
             const bool DELETESUBDIRECTORIES = true;
             if (string.IsNullOrEmpty(userId))
             {
                 throw new ArgumentNullException(nameof(userId));
-                return USERIDNULLOREMPTY;
             }
             string projectDirectoryPath = GetProjectDirectoryPath(userId, projectId);
             try 
@@ -147,18 +148,15 @@ namespace BlazorServerApp.Services
                         File.Delete(file);
                     }
                     await Task.Run(() => Directory.Delete(projectDirectoryPath, DELETESUBDIRECTORIES));
-                    return SUCCESS;
                 }
                 else
                 {
                     Console.WriteLine($"Project directory not found: {projectDirectoryPath}");
-                    return DIRNOTFOUND;
                 }
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Error deleting project directory: {ex.Message}");
-                return ERRORDELETING;
             }
         }
         
