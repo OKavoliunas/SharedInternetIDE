@@ -4,31 +4,32 @@
 @using BlazorMonaco.Languages
 @implements IDisposable
 
-<StandaloneCodeEditor @ref="standaloneEditor" @bind-Value="CodeContent" Options="editorOptions" Theme="vs-dark" @onDidChangeModelContent="OnInput"/>
+<StandaloneCodeEditor Id="@ProjectId.ToString()" ConstructionOptions="editorConstructionOptions" OnDidChangeModelContent="OnInput"/>
 @code {
+	[Parameter]
+	public int ProjectId { get; set; }
 	[Parameter]
 	public string CodeContent { get; set; }
 
 	[Parameter]
 	public EventCallback<string> CodeContentChanged { get; set; }
-
+	
 	[Parameter]
 	public string Language { get; set; }
 
 	private StandaloneCodeEditor standaloneEditor;
-	private StandaloneEditorConstructionOptions editorOptions;
-
-	private string EditorLanguage => GetMonacoLanguage(Language);
-
-	private Timer debounceTimer;
-	protected override void OnInitialized()
+	private StandaloneEditorConstructionOptions editorConstructionOptions (StandaloneCodeEditor editor)
 	{
-		editorOptions = new StandaloneEditorConstructionOptions
+		return new StandaloneEditorConstructionOptions
 			{
 				Language = GetMonacoLanguage(Language),
-				AutomaticLayout = true
+				AutomaticLayout = true,
+				Value = CodeContent
 			};
 	}
+
+	private Timer debounceTimer;
+
 	private void OnInput()
 	{
 		const int SECOND_MS = 1000;

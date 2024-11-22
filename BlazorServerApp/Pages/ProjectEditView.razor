@@ -1,4 +1,4 @@
-﻿@page "/project/{projectId:int}"
+﻿@page "/project/{ProjectId:int}"
 @inject ProjectDbService projectDbService
 @inject AuthenticationStateProvider authenticationStateProvider
 @inject UserFileService userFileService
@@ -6,10 +6,10 @@
 @using System.Security.Claims
 @using BlazorServerApp.Services
 @using BlazorServerApp.Models
-<CodeEditor @bind-CodeContent="codeContent" Language="@language"/>
+<CodeEditor ProjectId="@ProjectId" @bind-CodeContent="codeContent" Language="@language"/>
 @code {
 	[Parameter]
-	public int projectId { get; set; }
+	public int ProjectId { get; set; }
 
 	private string codeContent;
 	private Project currentProject;
@@ -22,11 +22,11 @@
 		var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
 
 
-		if (await projectDbService.IsProjectOwnedByUser(userId, projectId))
-		{
+		if (await projectDbService.IsProjectOwnedByUser(userId, ProjectId))
+	{
 			string selectedFileName = "";
-			currentProject = await projectDbService.GetProjectById(projectId);
-			List<string> fileNames = await userFileService.GetProjectFileNames(userId,projectId);
+			currentProject = await projectDbService.GetProjectById(ProjectId);
+			List<string> fileNames = await userFileService.GetProjectFileNames(userId,ProjectId);
 			bool isFirst = true;
 			foreach (string	fileName in fileNames)
 			{
@@ -43,7 +43,7 @@
 			{
 				language = currentProject.Language;
 
-				codeContent = await userFileService.GetFileContentAsync(userId, projectId, selectedFileName);
+				codeContent = await userFileService.GetFileContentAsync(userId, ProjectId, selectedFileName);
 			}
 		}
 			
