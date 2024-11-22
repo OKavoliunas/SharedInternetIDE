@@ -13,12 +13,6 @@ namespace BlazorServerApp.Services
         {
             this.applicationDbContext = applicationDbContext;
         }
-
-        public ProjectDbService()
-        {
-            applicationDbContext = new ApplicationDbContext();
-        }
-
         public async Task<int> CreateProjectInDatabaseAsync(string userId, string projectName, string language, string? description = null)
         {
             if (string.IsNullOrWhiteSpace(userId))
@@ -34,33 +28,69 @@ namespace BlazorServerApp.Services
                 Description = description,
                 CreationDate = DateTime.UtcNow
             };
-
-            applicationDbContext.Add(project);
-            await applicationDbContext.SaveChangesAsync();
+            try
+            {
+                applicationDbContext.Add(project);
+            }
+            catch (Exception ex) 
+            {
+                throw new Exception($"An exception occured while trying to add project: {ex}");
+            }
+            try 
+            {
+                await applicationDbContext.SaveChangesAsync();
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"An exception occured while trying to save the project {ex}");
+            }
 
             return project.ProjectID;
         }
         public async Task<bool> IsProjectOwnedByUser(string userId, int projectId) 
         {
-            Project project = await GetProjectById(projectId);
-            if (project.UserID == userId)
-                return true;
-            else
+            try
+            {
+                Project project = await GetProjectById(projectId);
+                if (project.UserID == userId)
+                    return true;
+            }
+            catch (Exception ex) 
+            {
+                throw new Exception($"An exception occured: {ex}");
+            }
                 return false;
         }
         public async Task<List<Project>> GetProjectsByUserIdAsync(string userId) 
         {
+            List<Project> projectList = new List<Project>();
             if (string.IsNullOrWhiteSpace(userId))
-                throw new ArgumentNullException(nameof(userId));
-            return await applicationDbContext.Projects
+                    throw new ArgumentNullException(nameof(userId));
+            try
+            {
+                projectList = await applicationDbContext.Projects
                 .Where(p => p.UserID == userId)
                 .OrderByDescending(p => p.CreationDate)
                 .ToListAsync();
+            }
+            catch (Exception ex) 
+            {
+                throw new Exception($"An exception occured while trying to retrieve user's with Id: {userId} projects: {ex}");
+            }
+            return projectList;
         }
-        public async Task<Project> GetProjectById(int projectId) 
-        { 
-            var project = await applicationDbContext.Projects
+        public async Task<Project> GetProjectById(int projectId)
+		{
+            Project project = new Project();
+            try
+            {
+                project = await applicationDbContext.Projects
                 .FirstOrDefaultAsync(p => p.ProjectID == projectId);
+            }
+            catch (Exception ex) 
+            {
+                throw new Exception($"An exception occured while trying to retrieve Project: {projectId} by its Id: {ex}");
+            }
             if (project == null)
                 throw new KeyNotFoundException($"Project with ID {projectId} was not found");
             return project;
@@ -75,22 +105,38 @@ namespace BlazorServerApp.Services
                 project.Name = newProjectName;
                 await applicationDbContext.SaveChangesAsync();
             }
+            else 
+            {
+                throw new KeyNotFoundException($"User with Id: {userId} doesn't own a project with Id {projectId}");
+            }
         }
-        public async Task<int> DeleteProjectFromDatabaseAsync(string userId, int projectId) 
+        public async Task DeleteProjectFromDatabaseAsync(string userId, int projectId) 
         {
-            const int SUCCESS = 0;
-            const int FAILURE = 1;
             if (string.IsNullOrWhiteSpace(userId))
                 throw new ArgumentNullException(nameof(userId));
             var project = await applicationDbContext.Projects.Where(p => p.UserID == userId && p.ProjectID == projectId).FirstOrDefaultAsync();
             if (project != null)
             {
-                applicationDbContext.Projects.Remove(project);
-                await applicationDbContext.SaveChangesAsync();
-                return SUCCESS;
+                try
+                {
+                    applicationDbContext.Projects.Remove(project);
+                }
+                catch (Exception ex) 
+                {
+                    throw new Exception($"An exception occured while trying to delete project with Id: {projectId} from database: {ex}");
+                }
+                try 
+                {
+                    await applicationDbContext.SaveChangesAsync();
+                }
+                catch(Exception ex) 
+                {
+                    throw new Exception($"An exception occured while trying to save changes within the database: {ex}");
+                }
+                
             }
             else { 
-                return FAILURE;
+                throw new NullReferenceException(nameof(project));
             }
         }
     }

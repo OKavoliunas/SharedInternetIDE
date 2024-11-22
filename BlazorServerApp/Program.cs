@@ -18,7 +18,7 @@ builder.Services.AddServerSideBlazor()
     .AddCircuitOptions(options => { options.DetailedErrors = true; });
 builder.Services.AddScoped<ProjectManagementService>();
 builder.Services.AddScoped<ProjectDbService>();
-builder.Services.AddSingleton<UserFileService>();
+builder.Services.AddScoped<UserFileService>();
 
 builder.Services.AddDefaultIdentity<IdentityUser>(options => options.SignIn.RequireConfirmedAccount = false)
 
