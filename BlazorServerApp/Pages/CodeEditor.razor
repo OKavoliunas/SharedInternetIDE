@@ -3,8 +3,7 @@
 @using BlazorMonaco.Editor
 @using BlazorMonaco.Languages
 @implements IDisposable
-
-<StandaloneCodeEditor Id="@ProjectId.ToString()" ConstructionOptions="editorConstructionOptions" OnDidChangeModelContent="OnInput"/>
+<StandaloneCodeEditor @ref="standaloneEditor" CssClass="monaco-editor" ConstructionOptions="editorConstructionOptions" OnDidChangeModelContent="OnInput" />
 @code {
 	[Parameter]
 	public int ProjectId { get; set; }
@@ -13,7 +12,7 @@
 
 	[Parameter]
 	public EventCallback<string> CodeContentChanged { get; set; }
-	
+
 	[Parameter]
 	public string Language { get; set; }
 
@@ -27,7 +26,24 @@
 				Value = CodeContent
 			};
 	}
-
+	protected override async Task OnParametersSetAsync()
+	{
+		if (standaloneEditor != null)
+		{
+			try
+			{
+				var currentEditorValue = await standaloneEditor.GetValue();
+				if (currentEditorValue != CodeContent)
+				{
+					await standaloneEditor.SetValue(CodeContent);
+				}
+			}
+			catch (Exception ex)
+			{
+				Console.WriteLine($"An exception occured while trying to update contents within the code editor: {ex}");
+			}
+		}
+	}
 	private Timer debounceTimer;
 
 	private void OnInput()
@@ -36,10 +52,23 @@
 		debounceTimer?.Dispose();
 		debounceTimer = new Timer(SaveCode, null, 1 * SECOND_MS, Timeout.Infinite);
 	}
-	private async void SaveCode(object state)
+	private void SaveCode(object state)
 	{
-		CodeContent = await standaloneEditor.GetValue();
-		await CodeContentChanged.InvokeAsync(CodeContent);
+		if (standaloneEditor != null)
+		{
+			InvokeAsync(async () =>
+			{
+				try
+				{
+					CodeContent = await standaloneEditor.GetValue();
+					await CodeContentChanged.InvokeAsync(CodeContent);
+				}
+				catch (Exception ex)
+				{
+					Console.WriteLine($"An exception occured while saving the code: {ex.Message}");
+				}
+			});
+		}
 	}
 	private string GetMonacoLanguage(string language)
 	{
