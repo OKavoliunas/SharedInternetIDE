@@ -65,12 +65,41 @@ namespace BlazorServerApp.Services
           
             return Path.Combine(BASE_PATH, userDirectoryName, projectDirectoryName); ;
         }
+        public async Task SaveFileContentsAsync(string fileName, string fileContent, string userId, int projectId) 
+        {
+            try
+            {
+                if (await projectDbService.IsProjectOwnedByUser(userId, projectId))
+                {
+                    List<String> fileNames = await GetProjectFileNames(userId, projectId);
+                    if (fileNames.Contains(fileName))
+                    {
+                        const string CODE_DIRECTORY = "SourceCode";
+                        string fullFilePath = Path.Combine(GetProjectDirectoryPath(userId, projectId),CODE_DIRECTORY,fileName) ;
+                        File.WriteAllText(fullFilePath, fileContent);
+                    }
+                    else 
+                    {
+                        throw new KeyNotFoundException($"File name: {fileName}, projectId: {projectId}");
+                    }
+                }
+                else 
+                {
+                    throw new KeyNotFoundException($"userId: {userId}, projectId: {projectId}");
+                }
+            }
+            catch (Exception ex) 
+            {
+                throw new Exception($"An exception occured while trying to save the file contents for file: {fileName} within project with projectId: {projectId} Exception: {ex}");
+            }
+        }
         public async Task<List<String>> GetProjectFileNames(string userId, int projectId) 
         {
             List<String> fileNames = new List<String>();
+            const string CODE_DIRECTORY = "SourceCode";
             if (await projectDbService.IsProjectOwnedByUser(userId, projectId))
             {
-                string projectDirectory = GetProjectDirectoryPath(userId, projectId);
+                string projectDirectory = Path.Combine(GetProjectDirectoryPath(userId, projectId),CODE_DIRECTORY);
 
                 try
                 {
@@ -102,10 +131,11 @@ namespace BlazorServerApp.Services
         }
         public async Task<string> GetFileContentAsync(string userId,int projectId, string fileName) 
         {
+            const string CODE_DIRECTORY = "SourceCode";
             if (await projectDbService.IsProjectOwnedByUser(userId, projectId))
             {
                 string projectDirectoryPath = GetProjectDirectoryPath(userId, projectId);
-                string filePath = Path.Combine(projectDirectoryPath, fileName);
+                string filePath = Path.Combine(projectDirectoryPath,CODE_DIRECTORY, fileName);
                 try
                 {
                     if (File.Exists(filePath))
