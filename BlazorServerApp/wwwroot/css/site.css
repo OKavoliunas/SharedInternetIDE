@@ -380,6 +380,9 @@ a, .btn-link {
     border-radius: 5px;
     z-index: 1001;
 }
+.monaco-editor {
+    height: 300px;
+}
 .dropdown-menu {
     position: absolute;
     top: 100%;
