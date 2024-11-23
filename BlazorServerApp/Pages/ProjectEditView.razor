@@ -6,7 +6,10 @@
 @using System.Security.Claims
 @using BlazorServerApp.Services
 @using BlazorServerApp.Models
-<CodeEditor ProjectId="@ProjectId" @bind-CodeContent="codeContent" Language="@language"/>
+@if (isLoaded)
+{
+	<CodeEditor ProjectId="@ProjectId" CodeContent="@codeContent" CodeContentChanged="OnCodeContentChanged" Language="@language"/>
+}
 @code {
 	[Parameter]
 	public int ProjectId { get; set; }
@@ -14,17 +17,19 @@
 	private string codeContent;
 	private Project currentProject;
 	private string language;
-
+	private string fileName;
+	private string userId;
+	private bool isLoaded = false;
 	protected override async Task OnInitializedAsync()
 	{
 		var authState = await authenticationStateProvider.GetAuthenticationStateAsync();
 		var user = authState.User;
-		var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
+		userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
 
 
 		if (await projectDbService.IsProjectOwnedByUser(userId, ProjectId))
-	{
-			string selectedFileName = "";
+		{
+
 			currentProject = await projectDbService.GetProjectById(ProjectId);
 			List<string> fileNames = await userFileService.GetProjectFileNames(userId,ProjectId);
 			bool isFirst = true;
@@ -32,27 +37,36 @@
 			{
 				if (isFirst)
 				{
-					selectedFileName = fileName;
+					this.fileName = fileName;
 					isFirst = false;	
 				}
 				if (fileName == currentProject.Name + GetExtension(currentProject))
-					selectedFileName = fileName;
+				{
+					this.fileName = fileName;
+				}
 
 			}
-			if (!string.IsNullOrEmpty(selectedFileName))
+			if (!string.IsNullOrEmpty(fileName))
 			{
 				language = currentProject.Language;
 
-				codeContent = await userFileService.GetFileContentAsync(userId, ProjectId, selectedFileName);
+				codeContent = await userFileService.GetFileContentAsync(userId, ProjectId, fileName);
+				isLoaded = true;
 			}
 		}
-			
+
 		else
 		{
-			//TODO: Redirect to a page for no authorization
+			Console.WriteLine("Project is not owned by user");
 		}
 
 	}
+	private async Task OnCodeContentChanged(string newCodeContent)
+	{
+		codeContent = newCodeContent;
+		await userFileService.SaveFileContentsAsync(fileName, codeContent, userId, ProjectId);
+	}
+	
 	private string GetExtension(Project project)
 	{
 		return project.Language switch
