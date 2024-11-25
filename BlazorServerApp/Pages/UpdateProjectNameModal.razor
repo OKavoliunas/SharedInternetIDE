@@ -1,0 +1,67 @@
+﻿@using Microsoft.AspNetCore.Components
+@using BlazorServerApp.Models
+
+@if (Visible)
+{
+    <div class="modal-backdrop">
+        <div class="modal">
+            <h3>Edit Project Name</h3>
+            <div class="modal-body">
+                <label for="projectName">Project Name:</label>
+                <input type="text" id="projectName" @bind="ProjectName" />
+            </div>
+            <div class="modal-buttons">
+                <button @onclick="OnCancel">Cancel</button>
+                <button @onclick="OnSave">Save</button>
+            </div>
+        </div>
+    </div>
+}
+@code {
+    [Parameter]
+    public bool Visible { get; set; }
+
+    [Parameter]
+    public EventCallback<bool> VisibleChanged { get; set; }
+
+    [Parameter]
+    public Project Project { get; set; }
+
+    [Parameter]
+    public EventCallback<Project> OnProjectNameUpdated { get; set; }
+
+    private string ProjectName { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        if (Project != null)
+        {
+            ProjectName = Project.Name;
+        }
+    }
+
+    private async Task OnSave()
+    {
+        if (!string.IsNullOrWhiteSpace(ProjectName))
+        {
+            Project.Name = ProjectName;
+            await OnProjectNameUpdated.InvokeAsync(Project);
+            await CloseModalAsync();
+        }
+        else
+        {
+            //TODO: Error message
+        }
+    }
+
+    private async Task OnCancel()
+    {
+        await CloseModalAsync();
+    }
+
+    private async Task CloseModalAsync()
+    {
+        Visible = false;
+        await VisibleChanged.InvokeAsync(Visible);
+    }
+}

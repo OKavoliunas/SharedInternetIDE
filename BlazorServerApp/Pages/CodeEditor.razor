@@ -1,0 +1,87 @@
+﻿@using Microsoft.AspNetCore.Components
+@using BlazorMonaco
+@using BlazorMonaco.Editor
+@using BlazorMonaco.Languages
+@implements IDisposable
+<StandaloneCodeEditor @ref="standaloneEditor" CssClass="monaco-editor" ConstructionOptions="editorConstructionOptions" OnDidChangeModelContent="OnInput" />
+@code {
+	[Parameter]
+	public int ProjectId { get; set; }
+	[Parameter]
+	public string CodeContent { get; set; }
+
+	[Parameter]
+	public EventCallback<string> CodeContentChanged { get; set; }
+
+	[Parameter]
+	public string Language { get; set; }
+
+	private StandaloneCodeEditor standaloneEditor;
+	private StandaloneEditorConstructionOptions editorConstructionOptions (StandaloneCodeEditor editor)
+	{
+		return new StandaloneEditorConstructionOptions
+			{
+				Language = GetMonacoLanguage(Language),
+				AutomaticLayout = true,
+				Value = CodeContent
+			};
+	}
+	protected override async Task OnParametersSetAsync()
+	{
+		if (standaloneEditor != null)
+		{
+			try
+			{
+				var currentEditorValue = await standaloneEditor.GetValue();
+				if (currentEditorValue != CodeContent)
+				{
+					await standaloneEditor.SetValue(CodeContent);
+				}
+			}
+			catch (Exception ex)
+			{
+				Console.WriteLine($"An exception occured while trying to update contents within the code editor: {ex}");
+			}
+		}
+	}
+	private Timer debounceTimer;
+
+	private void OnInput()
+	{
+		const int SECOND_MS = 1000;
+		debounceTimer?.Dispose();
+		debounceTimer = new Timer(SaveCode, null, 1 * SECOND_MS, Timeout.Infinite);
+	}
+	private void SaveCode(object state)
+	{
+		if (standaloneEditor != null)
+		{
+			InvokeAsync(async () =>
+			{
+				try
+				{
+					CodeContent = await standaloneEditor.GetValue();
+					await CodeContentChanged.InvokeAsync(CodeContent);
+				}
+				catch (Exception ex)
+				{
+					Console.WriteLine($"An exception occured while saving the code: {ex.Message}");
+				}
+			});
+		}
+	}
+	private string GetMonacoLanguage(string language)
+	{
+		return language switch
+		{
+			"Java" => "java",
+			"C++" => "cpp",
+			"C" => "c",
+			_ => "plaintext"
+		};
+	}
+	public void Dispose()
+	{
+		debounceTimer?.Dispose();
+	}
+}

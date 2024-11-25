@@ -1,0 +1,80 @@
+﻿@page "/project/{ProjectId:int}"
+@inject ProjectDbService projectDbService
+@inject AuthenticationStateProvider authenticationStateProvider
+@inject UserFileService userFileService
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.Security.Claims
+@using BlazorServerApp.Services
+@using BlazorServerApp.Models
+@if (isLoaded)
+{
+	<CodeEditor ProjectId="@ProjectId" CodeContent="@codeContent" CodeContentChanged="OnCodeContentChanged" Language="@language"/>
+}
+@code {
+	[Parameter]
+	public int ProjectId { get; set; }
+
+	private string codeContent;
+	private Project currentProject;
+	private string language;
+	private string fileName;
+	private string userId;
+	private bool isLoaded = false;
+	protected override async Task OnInitializedAsync()
+	{
+		var authState = await authenticationStateProvider.GetAuthenticationStateAsync();
+		var user = authState.User;
+		userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
+
+
+		if (await projectDbService.IsProjectOwnedByUser(userId, ProjectId))
+		{
+
+			currentProject = await projectDbService.GetProjectById(ProjectId);
+			List<string> fileNames = await userFileService.GetProjectFileNames(userId,ProjectId);
+			bool isFirst = true;
+			foreach (string	fileName in fileNames)
+			{
+				if (isFirst)
+				{
+					this.fileName = fileName;
+					isFirst = false;	
+				}
+				if (fileName == currentProject.Name + GetExtension(currentProject))
+				{
+					this.fileName = fileName;
+				}
+
+			}
+			if (!string.IsNullOrEmpty(fileName))
+			{
+				language = currentProject.Language;
+
+				codeContent = await userFileService.GetFileContentAsync(userId, ProjectId, fileName);
+				isLoaded = true;
+			}
+		}
+
+		else
+		{
+			Console.WriteLine("Project is not owned by user");
+		}
+
+	}
+	private async Task OnCodeContentChanged(string newCodeContent)
+	{
+		codeContent = newCodeContent;
+		await userFileService.SaveFileContentsAsync(fileName, codeContent, userId, ProjectId);
+	}
+	
+	private string GetExtension(Project project)
+	{
+		return project.Language switch
+		{
+			"Java" => ".java",
+			"C" => ".c",
+			"C++" => ".cpp",
+			_ => "."
+		};
+	}
+}

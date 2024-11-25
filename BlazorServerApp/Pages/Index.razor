@@ -1,6 +1,12 @@
 ﻿@page "/"
-@attribute [Authorize]
+@using BlazorServerApp.Services
+@using System.Security.Claims
 @using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+@inject AuthenticationStateProvider authenticationStateProvider
+@inject ProjectManagementService projectManagementService
+@inject NavigationManager navigationManager
+
 <PageTitle>Index</PageTitle>
 
 <div class="landing-container">
@@ -23,99 +29,49 @@
 		<div class="list-of-recent-envs">
 
 		</div>
-		<button class="see-all-envs">
+		<a class="see-all-envs" href="/projects">
 			See all environments
-		</button>
+		</a>
 	</div>
 
 
 	@if (isModalVisible)
 	{
-		<div class="modal-backdrop">
-			<div class="modal">
-				<div class="fileName">
-					<h3>Create New Environment</h3>
-					<label>File Name:</label>
-					<input type="text" id="fileName" @bind="fileName">
-				</div>
-				<div class="languageName">
-					<label>Programming Language:</label>
-					<select id="selectedLanguage" @bind="selectedLanguage">
-						@foreach (var language in languages)
-						{
-							<option value="@language.languageName">@language.languageName</option>
-						}
-					</select>
-				</div>
-				<div class="modal-buttons">
-					<button @onclick="Cancel">Cancel</button>
-					<button @onclick="CreateEnvironment">Create Environment</button>
-				</div>
-			</div>
-		</div>
+		<CreateProjectModal @bind-Visible="isModalVisible" ProjectCreated="HandleProjectCreated" />
 	}
 </div>
 
 @code {
 	private bool isModalVisible = false;
-	private string fileName = string.Empty;
-	private string selectedLanguage = string.Empty;
-	private List<(string languageName, string languageExtension)> languages = new List<(string, string)>
-	{
-		("C",".c"),
-		("C++",".cpp"),
-		("Java",".java") 
-	};
-	private string saveDirectory =  "/app/Saved_Environments";// TODO: make directory adjustable depending on the user logged in
-
 	private void OpenModal()
 	{
-		System.Console.WriteLine("OpenModal() was called");
 		isModalVisible = true;
 	}
-	private void Cancel(){ // When cancelling the env creation dialogue this makes Modal dialog invisible 
-		isModalVisible = false;
-		// This clears the fileName and selectedLanguage, so it wouldn't save if they were to open the Modal again
-		fileName = string.Empty;
-		selectedLanguage = string.Empty;
-	}
-	private void CreateEnvironment()
+	private async Task HandleProjectCreated(CreateProjectModal.ProjectCreatedEventArgs args)
 	{
-		if (!string.IsNullOrWhiteSpace(fileName) && !string.IsNullOrEmpty(selectedLanguage))
-		{
-			var selectedExtension = (languages.FirstOrDefault(lang => lang.languageName == selectedLanguage)).languageExtension;
-			SaveFile(fileName, selectedExtension);
-			// TODO: Need to implement routing to the created project environment
-			// This closes the Modal dialogue and clears the variables out of stored data if a new modal was opened
-			isModalVisible = false;
-			fileName = string.Empty;
-			selectedLanguage = string.Empty;
-		}
-		else // If the file name or the programming language is not entered properly, display an error message
-		{
-
-		}
-	}
-	private void SaveFile(string fileName, string fileExtension)
-	{
-		if (!Directory.Exists(saveDirectory))
-		{
-			Directory.CreateDirectory(saveDirectory);
-		}
-	
-		string fullFileName = Path.Combine(saveDirectory, $"{fileName}{fileExtension}");
 		try
 		{
-			// Save the content to the file
-			File.WriteAllText(fullFileName, "");
-
-			// Confirmation that the file has been saved (optional logging or UI feedback)
-			Console.WriteLine($"File saved successfully at {fullFileName}");
+			int projectId = await projectManagementService.CreateProjectAsync(args);
+			if (projectId >= 0)
+			{
+				navigationManager.NavigateTo($"/project/{projectId}");
+			}
+			else if (projectId == -1)
+			{
+				navigationManager.NavigateTo("/login");
+			}
+			else
+			{
+				Console.WriteLine("Error creating project");
+			}
 		}
 		catch (Exception ex)
 		{
-			// Handle any errors that occur during file creation
-			Console.WriteLine($"Error saving file: {ex.Message}");
+			Console.WriteLine($"Error creating project: {ex.Message}");
+		}
+		finally
+		{
+			isModalVisible = false;
 		}
 	}
 }

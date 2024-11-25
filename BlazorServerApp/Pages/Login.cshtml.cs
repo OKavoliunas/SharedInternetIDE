@@ -6,11 +6,11 @@ using System.ComponentModel.DataAnnotations;
 
 public class LoginModel : PageModel
 {
-    private readonly SignInManager<IdentityUser> _signInManager;
+    private readonly SignInManager<IdentityUser> signInManager;
 
     public LoginModel(SignInManager<IdentityUser> signInManager)
     {
-        _signInManager = signInManager;
+        this.signInManager = signInManager;
     }
 
     [BindProperty]
@@ -36,7 +36,7 @@ public class LoginModel : PageModel
             }
             return Page();
         }
-        var result = await _signInManager.PasswordSignInAsync(Input.Email, Input.Password, isPersistent: false, lockoutOnFailure: false);
+        var result = await signInManager.PasswordSignInAsync(Input.Email, Input.Password, isPersistent: false, lockoutOnFailure: false);
         if (result.Succeeded)
         {
             return LocalRedirect("~/");

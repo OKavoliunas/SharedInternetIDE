@@ -1,6 +1,6 @@
 ﻿using System;
 using Microsoft.EntityFrameworkCore.Migrations;
-
+using BlazorServerApp.Data;
 #nullable disable
 
 namespace BlazorServerApp.Migrations

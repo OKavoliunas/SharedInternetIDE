@@ -5,17 +5,25 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using BlazorServerApp.Services;
+using BlazorServerApp.Data;
 
 
 var builder = WebApplication.CreateBuilder(args);
-// Add services to the container.
-// Add services to the container.
+
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(connectionString));
+builder.Services.AddServerSideBlazor()
+    .AddCircuitOptions(options => { options.DetailedErrors = true; });
+builder.Services.AddScoped<ProjectManagementService>();
+builder.Services.AddScoped<ProjectDbService>();
+builder.Services.AddScoped<UserFileService>();
 
 builder.Services.AddDefaultIdentity<IdentityUser>(options => options.SignIn.RequireConfirmedAccount = false)
+
 .AddEntityFrameworkStores<ApplicationDbContext>();
+
 builder.Services.AddRazorPages();
 builder.Services.AddServerSideBlazor();
 var app = builder.Build();
