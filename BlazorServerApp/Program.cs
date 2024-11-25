@@ -19,7 +19,7 @@ builder.Services.AddServerSideBlazor()
 builder.Services.AddScoped<ProjectManagementService>();
 builder.Services.AddScoped<ProjectDbService>();
 builder.Services.AddScoped<UserFileService>();
-
+builder.Services.AddSingleton<CompilerService>();
 builder.Services.AddDefaultIdentity<IdentityUser>(options => options.SignIn.RequireConfirmedAccount = false)
 
 .AddEntityFrameworkStores<ApplicationDbContext>();

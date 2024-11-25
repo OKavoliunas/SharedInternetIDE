@@ -2,6 +2,7 @@
 @inject ProjectDbService projectDbService
 @inject AuthenticationStateProvider authenticationStateProvider
 @inject UserFileService userFileService
+@inject CompilerService compilerService
 @using Microsoft.AspNetCore.Components.Authorization
 @using System.Security.Claims
 @using BlazorServerApp.Services
@@ -9,6 +10,21 @@
 @if (isLoaded)
 {
 	<CodeEditor ProjectId="@ProjectId" CodeContent="@codeContent" CodeContentChanged="OnCodeContentChanged" Language="@language"/>
+	<button @onclick="CompileCode">Compile</button>
+	@if (compilationResult != null)
+    {
+        @if (compilationResult.Success)
+        {
+            <h3>Output:</h3>
+            <pre>@compilationResult.Output</pre>
+        }
+        else
+        {
+            <h3>Errors:</h3>
+            <pre>@compilationResult.Errors</pre>
+        }
+    }
+
 }
 @code {
 	[Parameter]
@@ -20,6 +36,9 @@
 	private string fileName;
 	private string userId;
 	private bool isLoaded = false;
+
+	private CompilationResult compilationResult;
+
 	protected override async Task OnInitializedAsync()
 	{
 		var authState = await authenticationStateProvider.GetAuthenticationStateAsync();
@@ -61,6 +80,15 @@
 		}
 
 	}
+	private async Task CompileCode()
+    {
+
+        await userFileService.SaveFileContentsAsync(fileName, codeContent, userId, ProjectId);
+
+        compilationResult = await compilerService.CompileCodeAsync(codeContent, fileName, language);
+
+        StateHasChanged();
+    }
 	private async Task OnCodeContentChanged(string newCodeContent)
 	{
 		codeContent = newCodeContent;
