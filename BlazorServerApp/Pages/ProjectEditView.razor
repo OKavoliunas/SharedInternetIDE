@@ -9,36 +9,96 @@
 @using BlazorServerApp.Models
 @if (isLoaded)
 {
-	<CodeEditor ProjectId="@ProjectId" CodeContent="@codeContent" CodeContentChanged="OnCodeContentChanged" Language="@language"/>
+	<div class="files-and-code">
+		<ul class="project-file-list">
+			<div class="add-file-button-container">
+				<button class="add-file" @onclick="ShowAddFilePrompt">
+					<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--!Font Awesome Free 6.7.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2024 Fonticons, Inc.--><path d="M0 64C0 28.7 28.7 0 64 0L224 0l0 128c0 17.7 14.3 32 32 32l128 0 0 38.6C310.1 219.5 256 287.4 256 368c0 59.1 29.1 111.3 73.7 143.3c-3.2 .5-6.4 .7-9.7 .7L64 512c-35.3 0-64-28.7-64-64L0 64zm384 64l-128 0L256 0 384 128zm48 96a144 144 0 1 1 0 288 144 144 0 1 1 0-288zm16 80c0-8.8-7.2-16-16-16s-16 7.2-16 16l0 48-48 0c-8.8 0-16 7.2-16 16s7.2 16 16 16l48 0 0 48c0 8.8 7.2 16 16 16s16-7.2 16-16l0-48 48 0c8.8 0 16-7.2 16-16s-7.2-16-16-16l-48 0 0-48z"/></svg>
+				</button>
+			</div>
+			@foreach(string fileName in fileNames)
+			{
+				<li class="file-entry">
+					<button @onclick="() => {
+					SelectFile(fileName);	
+					}">
+						<div class="file-icon">
+							<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--!Font Awesome Free 6.7.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2024 Fonticons, Inc.--><path d="M0 64C0 28.7 28.7 0 64 0L224 0l0 128c0 17.7 14.3 32 32 32l128 0 0 288c0 35.3-28.7 64-64 64L64 512c-35.3 0-64-28.7-64-64L0 64zm384 64l-128 0L256 0 384 128z"/></svg>
+						</div>
+						<div>
+							@fileName
+						</div>
+					</button>
+				</li>
+			}
+		</ul>
+		<CodeEditor ProjectId="@ProjectId" CodeContent="@codeContent" CodeContentChanged="SaveCode" Language="@language"/>
+	</div>
+	@if (showAddFileModal)
+	{
+		<div class="modal-backdrop">
+			<div class="modal">
+				<h3>New File</h3>
+				<input @bind="newFileName"/>
+				<div class="modal-buttons">
+					<button @onclick="ConfirmAddFileAsync">Add</button>
+					<button @onclick="CancelAddFile">Cancel</button>
+				</div>
+			</div>
+		</div>
+	}
 	<button @onclick="CompileCode">Compile</button>
-	@if (compilationResult != null)
-    {
-        @if (compilationResult.Success)
-        {
-            <h3>Output:</h3>
-            <pre>@compilationResult.Output</pre>
-        }
-        else
-        {
-            <h3>Errors:</h3>
-            <pre>@compilationResult.Errors</pre>
-        }
-    }
+
+	<div class="output-console">
+        <h3>Output:</h3>
+        <pre>@currentOutput</pre>
+        <pre>@currentErrors</pre>
+	</div>
+
 
 }
 @code {
 	[Parameter]
 	public int ProjectId { get; set; }
 
-	private string codeContent;
 	private Project currentProject;
-	private string language;
+	private List<string> fileNames;
+	private string selectedFile;
 	private string fileName;
-	private string userId;
+	private string codeContent;
+	private string language;
+
+	private string currentOutput = string.Empty;
+	private string currentErrors = string.Empty;
+
 	private bool isLoaded = false;
 
-	private CompilationResult compilationResult;
+	private bool showAddFileModal = false;
+	private string newFileName;
 
+	private string userId;
+
+	CompilationResult compilationResult;
+	protected override void OnInitialized()
+	{
+		compilerService.OnOutputReceived += (data) =>
+		{
+			InvokeAsync(() =>
+			{
+				currentOutput += data + "\n";
+				StateHasChanged();
+			});
+		};
+
+		compilerService.OnErrorReceived += (data) =>
+		{
+			InvokeAsync(() =>
+			{
+				currentErrors += data + "\n";
+				StateHasChanged();
+			});
+		};
+	}
 	protected override async Task OnInitializedAsync()
 	{
 		var authState = await authenticationStateProvider.GetAuthenticationStateAsync();
@@ -50,26 +110,26 @@
 		{
 
 			currentProject = await projectDbService.GetProjectById(ProjectId);
-			List<string> fileNames = await userFileService.GetProjectFileNames(userId,ProjectId);
+			fileNames = await userFileService.GetProjectFileNames(userId,ProjectId);
 			bool isFirst = true;
 			foreach (string	fileName in fileNames)
 			{
 				if (isFirst)
 				{
-					this.fileName = fileName;
+					selectedFile = fileName;
 					isFirst = false;	
 				}
 				if (fileName == currentProject.Name + GetExtension(currentProject))
 				{
-					this.fileName = fileName;
+					selectedFile = fileName;
 				}
 
 			}
-			if (!string.IsNullOrEmpty(fileName))
+			if (!string.IsNullOrEmpty(selectedFile))
 			{
 				language = currentProject.Language;
 
-				codeContent = await userFileService.GetFileContentAsync(userId, ProjectId, fileName);
+				codeContent = await userFileService.GetFileContentAsync(userId, ProjectId, selectedFile);
 				isLoaded = true;
 			}
 		}
@@ -80,21 +140,61 @@
 		}
 
 	}
+	private async void SelectFile(string fileName)
+	{
+		await userFileService.SaveFileContentsAsync(fileName: selectedFile, fileContent: codeContent, userId: userId, projectId: ProjectId);
+		selectedFile = fileName;
+		codeContent = await userFileService.GetFileContentAsync(userId, ProjectId, fileName);
+		StateHasChanged();
+	}
+	private void ShowAddFilePrompt()
+	{
+		newFileName = string.Empty;
+		showAddFileModal = true;
+	}
+	private void CancelAddFile()
+	{
+		showAddFileModal = false;
+	}
+	private async Task ConfirmAddFileAsync()
+	{
+		AddNewFileAsync(newFileName);
+		showAddFileModal = false;
+		StateHasChanged();
+	}
+	private async Task AddNewFileAsync(string fileName)
+	{
+		await userFileService.CreateFile(userId, ProjectId, Path.GetFileNameWithoutExtension(fileName), Path.GetExtension(fileName));
+		fileNames.Add(fileName);
+	}
 	private async Task CompileCode()
-    {
+	{
 
-        await userFileService.SaveFileContentsAsync(fileName, codeContent, userId, ProjectId);
+		await userFileService.SaveFileContentsAsync(fileName: selectedFile, fileContent: codeContent, userId: userId, projectId: ProjectId);
+		string fileExtension = Path.GetExtension(selectedFile);
+		var result = await compilerService.CompileCodeAsync(await userFileService.GetLanguageByExtension(fileExtension),userId, ProjectId);
 
-        compilationResult = await compilerService.CompileCodeAsync(codeContent, fileName, language);
-
-        StateHasChanged();
-    }
-	private async Task OnCodeContentChanged(string newCodeContent)
+		if (result.IsSuccess)
+		{
+			compilationResult = result.Data;
+		}
+		else
+		{
+			compilationResult = new CompilationResult
+			{
+				Success = false,
+				Errors = result.ErrorMessage,
+				Output = string.Empty
+			};
+		}
+		StateHasChanged();
+	}
+	private async Task SaveCode(string newCodeContent)
 	{
 		codeContent = newCodeContent;
-		await userFileService.SaveFileContentsAsync(fileName, codeContent, userId, ProjectId);
+		await userFileService.SaveFileContentsAsync(fileName: selectedFile, fileContent: codeContent, userId: userId, projectId: ProjectId);
 	}
-	
+
 	private string GetExtension(Project project)
 	{
 		return project.Language switch
