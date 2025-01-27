@@ -284,7 +284,6 @@
 		{
 			throw new KeyNotFoundException($"An exception occured while deleting a project {ex}");
 		}
-		//Refresh the project list after deleting the project
 		try
 		{
 			var authState = await authenticationStateProvider.GetAuthenticationStateAsync();
