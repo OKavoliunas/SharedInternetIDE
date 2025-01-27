@@ -19,7 +19,7 @@ builder.Services.AddServerSideBlazor()
 builder.Services.AddScoped<ProjectManagementService>();
 builder.Services.AddScoped<ProjectDbService>();
 builder.Services.AddScoped<UserFileService>();
-builder.Services.AddSingleton<CompilerService>();
+builder.Services.AddScoped<CompilerService>();
 builder.Services.AddDefaultIdentity<IdentityUser>(options => options.SignIn.RequireConfirmedAccount = false)
 
 .AddEntityFrameworkStores<ApplicationDbContext>();
@@ -28,7 +28,6 @@ builder.Services.AddRazorPages();
 builder.Services.AddServerSideBlazor();
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Error");
