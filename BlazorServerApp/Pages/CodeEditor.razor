@@ -49,8 +49,9 @@
 	private void OnInput()
 	{
 		const int SECOND_MS = 1000;
+		const int AUTO_SAVE_CODE_AFTER = (int)(0.3 * SECOND_MS);
 		debounceTimer?.Dispose();
-		debounceTimer = new Timer(SaveCode, null, 1 * SECOND_MS, Timeout.Infinite);
+		debounceTimer = new Timer(SaveCode, null, AUTO_SAVE_CODE_AFTER, Timeout.Infinite);
 	}
 	private void SaveCode(object state)
 	{
