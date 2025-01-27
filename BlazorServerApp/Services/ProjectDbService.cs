@@ -79,6 +79,10 @@ namespace BlazorServerApp.Services
             }
             return projectList;
         }
+        public string GetProjectLanguage(Project project) 
+        {
+            return project.Language;
+        }
         public async Task<Project> GetProjectById(int projectId)
 		{
             Project project = new Project();
