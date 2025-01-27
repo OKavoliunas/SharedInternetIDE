@@ -1,7 +1,7 @@
 ﻿using System.IO;
 using System.Threading.Tasks;
 using BlazorServerApp.Services;
-
+using BlazorServerApp.Models;
 namespace BlazorServerApp.Services
 {
     public class UserFileService
@@ -49,13 +49,21 @@ namespace BlazorServerApp.Services
             string projectDirectory = GetProjectDirectoryPath(userId,projectId);
             const string sourceCodeDirectory = "SourceCode";
             
-            string fullFilePath = Path.Combine(projectDirectory,sourceCodeDirectory,directory) + "\\" + fileName + fileExtension;
+            string fullFilePath = Path.Combine(projectDirectory,sourceCodeDirectory, directory,  fileName + fileExtension);
 
             if (File.Exists(fullFilePath))
-                Console.WriteLine("A file with that name already exists in this directory");    
-            if (!File.Exists(fullFilePath))
-                File.Create(fullFilePath);
-
+                Console.WriteLine("A file with that name already exists in this directory");
+            else 
+            {
+                using (FileStream fs = new FileStream(fullFilePath, FileMode.Create, FileAccess.Write)) 
+                {
+                    using (StreamWriter wr = new StreamWriter(fs)) 
+                    {
+                        var language = await GetLanguageByExtension(fileExtension);
+                        await wr.WriteAsync(await GetCodePreset(language, fileName, await projectDbService.GetProjectById(projectId)));
+                    }
+                }
+            }
             await Task.CompletedTask;
         }
         public string GetProjectDirectoryPath(string userId, int projectId)
@@ -189,6 +197,118 @@ namespace BlazorServerApp.Services
                 Console.WriteLine($"Error deleting project directory: {ex.Message}");
             }
         }
-        
+        public Task<String> GetExtensionByLanguage(String language)
+        {
+            return Task.FromResult(language.ToLower() switch
+            {
+                "java" => ".java",
+                "c++" => ".cpp",
+                "c" => ".c",
+                "xml" => ".xml",
+                _ => ""
+            });
+        }
+        public Task<String> GetLanguageByExtension(String extension) 
+        {
+            return Task.FromResult(extension.ToLower() switch 
+            {
+                ".java" => "java",
+                ".cpp" => "c++",
+                ".c" => "c",
+                ".xml" => "xml",
+                _ => ""
+            });
+        }
+        public async Task CreateDefaultProjectFiles(string userId, int projectId)
+        {
+            const string MAVEN_CONFIG_FILE_NAME = "pom", MAVEN_CONFIG_FILE_EXTENSION = ".xml";
+            Project project = await projectDbService.GetProjectById(projectId);
+            switch (project.Language.ToLower())
+            {
+                case "java":  
+                    await CreateFile(userId, projectId, project.Name, await GetExtensionByLanguage("java"));
+                    await CreateFile(userId, projectId, MAVEN_CONFIG_FILE_NAME, MAVEN_CONFIG_FILE_EXTENSION);
+                    break;
+                case "c++":
+                    await CreateFile(userId, projectId, project.Name, await GetExtensionByLanguage("c++"));
+                    break;
+                case "c":
+                    await CreateFile(userId, projectId, project.Name, await GetExtensionByLanguage("c"));
+                    break;
+                default:
+                    throw new ArgumentException($"Language of the project with id: {projectId} is not supported");
+            };
+        }
+        public async Task<String> GetCodePreset(String language, String fileName, Project project)
+        {
+            
+            return await Task.FromResult(language.ToLower() switch 
+            {
+                "java" => $"public class {fileName} {{\n    public static void main(String[] args) {{\n        System.out.println(\"Hello, World!\");\n    }}\n}}",
+                "c++" => $"#include <iostream>\n\nusing namespace std;\n\nint main() {{\n    cout << \"Hello, World!\" << endl;\n    return 0;\n}}",
+                "c" => $"#include <stdio.h>\n\nint main() {{\n    printf(\"Hello, World!\\n\");\n    return 0;\n}}",
+                "xml" => fileName.ToLower().Equals("pom")
+                ? @$"<project xmlns=""http://maven.apache.org/POM/4.0.0""
+                     xmlns:xsi=""http://www.w3.org/2001/XMLSchema-instance""
+                     xsi:schemaLocation=""http://maven.apache.org/POM/4.0.0 
+                     https://maven.apache.org/xsd/maven-4.0.0.xsd"">
+                <modelVersion>4.0.0</modelVersion>
+
+                <groupId>com.example</groupId>
+                <artifactId>myapp</artifactId>
+                <version>1.0-SNAPSHOT</version>
+
+                <properties>
+                    <maven.compiler.source>17</maven.compiler.source>
+                    <maven.compiler.target>17</maven.compiler.target>
+                </properties>
+
+                <build>
+                    <plugins>
+                        <plugin>
+                            <groupId>org.apache.maven.plugins</groupId>
+                            <artifactId>maven-compiler-plugin</artifactId>
+                            <version>3.8.1</version>
+                            <configuration>
+                                <source>17</source>
+                                <target>17</target>
+                            </configuration>
+                        </plugin>
+                        <plugin>
+                            <groupId>org.apache.maven.plugins</groupId>
+                            <artifactId>maven-assembly-plugin</artifactId>
+                            <version>3.3.0</version>
+                            <configuration>
+                                <descriptorRefs>
+                                    <descriptorRef>jar-with-dependencies</descriptorRef>
+                                </descriptorRefs>
+                                <archive>
+                                    <manifest>
+                                        <mainClass>{project.Name}</mainClass>
+                                    </manifest>
+                                </archive>
+                            </configuration>
+                            <executions>
+                                <execution>
+                                    <id>make-assembly</id>
+                                    <phase>package</phase>
+                                    <goals>
+                                        <goal>single</goal>
+                                    </goals>
+                                </execution>
+                            </executions>
+                        </plugin>
+                    </plugins>
+                </build>
+
+                <dependencies>
+                    <!-- Add any project dependencies here -->
+                </dependencies>
+            </project>"
+            : "",
+                _  => ""
+
+            });
+        }
     }
 }
