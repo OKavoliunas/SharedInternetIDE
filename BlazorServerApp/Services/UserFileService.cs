@@ -10,7 +10,7 @@ namespace BlazorServerApp.Services
         private readonly ProjectDbService projectDbService;
         public UserFileService(IConfiguration configuration, ProjectDbService projectDbService) 
         {
-            BASE_PATH = configuration["FileStorage:Basepath"] ?? "D:/CompilerApp/StoredFiles";
+            BASE_PATH = configuration["FileStorage:Basepath"] ?? "C:/CompilerApp/StoredFiles";
             this.projectDbService = projectDbService ?? throw new ArgumentNullException(nameof(projectDbService));
         }
         public async Task CreateDefaultProjectDirectoriesAsync(string userId, int projectId) 
