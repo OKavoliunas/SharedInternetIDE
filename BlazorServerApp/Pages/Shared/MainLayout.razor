@@ -1,0 +1,42 @@
+﻿@using System.Security.Claims
+@inherits LayoutComponentBase
+@inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthStateProvider
+<AuthorizeView>
+
+		<Authorized>
+			<div class="top-nav-bar">
+				<span>Hello @user.Identity.Name</span>
+			</div>
+		</Authorized>
+		<NotAuthorized>
+			@if (IsOnAuthPage)
+			{
+				<div class="body-content">
+					@Body
+				</div>
+			}
+			else
+			{
+				<Landing />
+			}
+		</NotAuthorized>
+</AuthorizeView>
+@code {
+	private ClaimsPrincipal user;
+  
+	protected override async Task OnInitializedAsync()
+	  {
+		var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+		user = authState.User;
+	  }
+
+	private bool IsOnAuthPage =>
+    Navigation.Uri.Equals("/login", StringComparison.OrdinalIgnoreCase)
+    || Navigation.Uri.Equals("/signup", StringComparison.OrdinalIgnoreCase);
+  
+  private async Task Logout()
+  {
+    Navigation.NavigateTo("Identity/Account/Logout", true);
+  }
+}
