@@ -27,5 +27,7 @@ namespace BlazorServerApp.Models
 
         [Required]
         public DateTime CreationDate { get; set; } = DateTime.UtcNow;
+
+        public DateTime LastAccessedDate { get; set; } = DateTime.UtcNow;
     }
 }

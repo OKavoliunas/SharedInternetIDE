@@ -1,0 +1,92 @@
+﻿@page "/home"
+@using BlazorServerApp.Services
+@using BlazorServerApp.Models
+@using BlazorServerApp.Pages
+@using System.Security.Claims
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+@inject AuthenticationStateProvider authenticationStateProvider
+@inject ProjectManagementService projectManagementService
+@inject NavigationManager navigationManager
+<PageTitle>Home</PageTitle>
+
+<div class="landing container">
+	<div class="top-navbar">
+		<div class="home">
+		</div>
+
+		<div class="profile">
+
+		</div>
+	</div>
+	
+	<div class="recent-envs">
+		<h2>Recent projects:</h2>
+		<ProjectList/>
+		<div class="recent-env-buttons">
+		<button class="create-new-env" @onclick="OpenModal">
+			<svg width="14" height="15" viewBox="0 0 14 15" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M7 1.6665V13.3332M1.16667 7.49984H12.8333" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+			<div>Create</div>
+		</button>
+		<a class="see-all-envs link-button" href="/projects">
+			<div>See all</div>
+			<svg width="20" height="21" viewBox="0 0 20 21" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4.16667 10.4998H15.8333M15.8333 10.4998L10 4.6665M15.8333 10.4998L10 16.3332" stroke="#007ACC" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+		</a>
+		<div/>
+	</div>
+	</div>
+
+
+	@if (isModalVisible)
+	{
+		<CreateProjectModal @bind-Visible="isModalVisible" ProjectCreated="HandleProjectCreated" />
+	}
+</div>
+
+@code {
+	private bool isModalVisible = false;
+	private List<Project> projects = new List<Project>();
+	private const int MaxRecentProjects = 6;
+	protected override async Task OnInitializedAsync()
+	{
+		try
+		{
+			projects = await projectManagementService.GetProjectsAsync();
+		}
+		catch (Exception ex)
+		{
+			Console.WriteLine($"An exception occured within the method OnInitializedAsync: {ex}");
+		}
+	}
+	private void OpenModal()
+	{
+		isModalVisible = true;
+	}
+	private async Task HandleProjectCreated(Models.ProjectCreatedEventArgs args)
+	{
+		try
+		{
+			int projectId = await projectManagementService.CreateProjectAsync(args);
+			if (projectId >= 0)
+			{
+				navigationManager.NavigateTo($"/project/{projectId}");
+			}
+			else if (projectId == -1)
+			{
+				navigationManager.NavigateTo("/login");
+			}
+			else
+			{
+				Console.WriteLine("Error creating project");
+			}
+		}
+		catch (Exception ex)
+		{
+			Console.WriteLine($"Error creating project: {ex.Message}");
+		}
+		finally
+		{
+			isModalVisible = false;
+		}
+	}
+}

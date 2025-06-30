@@ -6,21 +6,29 @@
 @inject NavigationManager NavigationManager
 <div class="container" id="registration-page">
     <EditForm id="registration-form" Model="registerModel" OnValidSubmit="HandleValidSubmit">
-        <DataAnnotationsValidator />
-	    <ValidationSummary />
-
-	    <div class="registration-field">
-		    <label for="signup-email-input-field">EMAIL</label>
-		    <InputText @bind-Value="registerModel.Email" type="text" required autocomplete="email" id="signup-email-input-field" name="email" autocorrect="off" />
-	    </div>
-	    <div class="registration-field">
-		    <label for="signup-email-input-field">PASSWORD</label>
-		    <InputText @bind-Value="registerModel.Password" type="password" required autocapitalize="off" id="signup-password-input-field" />
-	    </div>
-		<button class="register-button" type="submit">Create Account</button>
-	    <div class="login">
-		     Already have an account? <a href="Login">Log in</a>
-	    </div>
+        <div class="auth-modal two-column container" id="auth-two-column">
+            <DataAnnotationsValidator />
+	        <ValidationSummary />
+            <div class="left-column" id="auth-left-column">
+	            <div class="registration-field" id="email-field">
+		            <label for="signup-email-input-field">EMAIL</label>
+		            <InputText @bind-Value="registerModel.Email" type="text" required autocomplete="email" id="signup-email-input-field" name="email" autocorrect="off" />
+	            </div>
+	            <div class="registration-field">
+		            <label for="signup-email-input-field">PASSWORD</label>
+		            <InputText @bind-Value="registerModel.Password" type="password" required autocapitalize="off" id="signup-password-input-field" />
+	            </div>
+		        <button class="register-button" type="submit">Create Account</button>
+                <div class="flex-centered">
+	                <div class="login">
+		                 Already have an account? <a href="Login">Log in</a>
+	                </div>
+                </div>
+            </div>
+            <div class="right-column" id="auth-right-column">
+                <img src="/images/neon_lights.jpg" class="transformed-neg-13-deg"/>
+            </div>
+        </div>
     </EditForm>
 </div>
 @code {

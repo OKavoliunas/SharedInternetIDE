@@ -1,7 +1,7 @@
 ﻿using BlazorServerApp.Services;
+using BlazorServerApp.Models;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Components.Authorization;
-using BlazorServerApp.Pages;
 namespace BlazorServerApp.Services
 {
     public class ProjectManagementService
@@ -16,7 +16,7 @@ namespace BlazorServerApp.Services
             this.projectDbService = projectService;
             this.userFileService = userFileService;
         }
-        public async Task<int> CreateProjectAsync(CreateProjectModal.ProjectCreatedEventArgs args)
+        public async Task<int> CreateProjectAsync(Models.ProjectCreatedEventArgs args)
         {
             var authState = await authenticationStateProvider.GetAuthenticationStateAsync();
             var user = authState.User;
@@ -61,6 +61,22 @@ namespace BlazorServerApp.Services
             {
                 throw ex;
             }
+        }
+        public async Task<List<Project>> GetProjectsAsync() 
+        {
+            List<Project> projects = new List<Project>();
+            var authState = await authenticationStateProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
+            if (user.Identity != null && user.Identity.IsAuthenticated)
+            {
+                var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
+                if (string.IsNullOrWhiteSpace(userId))
+                    throw new ArgumentNullException(nameof(userId));
+                else
+                    projects = await projectDbService.GetProjectsByUserIdAsync(userId) ?? new List<Project>();
+
+            }
+            return projects;
         }
     }
 }

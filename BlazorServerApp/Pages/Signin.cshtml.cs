@@ -13,6 +13,7 @@ public class SignInModel : PageModel
         this.signInManager = signInManager;
         this.userManager = userManager;
     }
+    
     public async Task<IActionResult> OnGetAsync(string userId) 
     {
         var user = await userManager.FindByIdAsync(userId);
@@ -27,4 +28,5 @@ public class SignInModel : PageModel
         }
         
     }
+    
 }

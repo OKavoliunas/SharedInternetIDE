@@ -11,22 +11,29 @@
     <title>Login</title>
 </head>
 <body>
-    <div class="container" id="login-page">
-        <form method="post" class="login" id="login-form">
-            @Html.AntiForgeryToken()
-            <div asp-validation-summary="All"></div>
-            <div class="login-field">
-                <label>EMAIL</label>
-                <input asp-for="Input.Email" />
-                <span asp-validation-for="Input.Email"></span>
+    <div class="container" id="registration-page">
+        <form method="post" class="login" id="registration-form">
+            <div class="auth-modal two-column container" id="auth-two-column">
+                @Html.AntiForgeryToken()
+                <div asp-validation-summary="All"></div>
+                <div class="left-column" id="auth-left-column">
+                    <div class="registration-field" id="email-field">
+                        <label>EMAIL</label>
+                        <input asp-for="Input.Email" />
+                        <span asp-validation-for="Input.Email"></span>
+                    </div>
+                    <div class="registration-field">
+                        <label>PASSWORD</label>
+                        <input asp-for="Input.Password" type="password" />
+                        <span asp-validation-for="Input.Password"></span>
+                    </div>
+                    <button class="login-button" type="submit">Log In</button>
+                    <div class="signup">Don't yet have an account? <a href="/Signup">Sign up</a></div>
+                </div>
+                <div class="right-column" id="auth-right-column">
+                    <img src="/images/neon_lights.jpg" class="transformed-neg-13-deg"/>
+                </div>
             </div>
-            <div class="login-field">
-                <label>PASSWORD</label>
-                <input asp-for="Input.Password" type="password" />
-                <span asp-validation-for="Input.Password"></span>
-            </div>
-            <button class="login-button" type="submit">Log In</button>
-            <div class="signup">Don't yet have an account? <a href="/Signup">Sign up</a></div>
         </form>
         @if (!string.IsNullOrEmpty(Model.ErrorMessage))
         {
