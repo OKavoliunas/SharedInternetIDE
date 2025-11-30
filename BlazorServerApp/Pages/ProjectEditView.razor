@@ -2,7 +2,6 @@
 @inject ProjectDbService projectDbService
 @inject AuthenticationStateProvider authenticationStateProvider
 @inject UserFileService userFileService
-@inject CompilerService compilerService
 @using Microsoft.AspNetCore.Components.Authorization
 @using System.Security.Claims
 @using BlazorServerApp.Services
@@ -47,7 +46,6 @@
 			</div>
 		</div>
 	}
-	<button @onclick="CompileCode">Compile</button>
 
 	<div class="output-console">
         <h3>Output:</h3>
@@ -78,27 +76,7 @@
 
 	private string userId;
 
-	CompilationResult compilationResult;
-	protected override void OnInitialized()
-	{
-		compilerService.OnOutputReceived += (data) =>
-		{
-			InvokeAsync(() =>
-			{
-				currentOutput += data + "\n";
-				StateHasChanged();
-			});
-		};
-
-		compilerService.OnErrorReceived += (data) =>
-		{
-			InvokeAsync(() =>
-			{
-				currentErrors += data + "\n";
-				StateHasChanged();
-			});
-		};
-	}
+	
 	protected override async Task OnInitializedAsync()
 	{
 		var authState = await authenticationStateProvider.GetAuthenticationStateAsync();
@@ -167,28 +145,7 @@
 		await userFileService.CreateFile(userId, ProjectId, Path.GetFileNameWithoutExtension(fileName), Path.GetExtension(fileName));
 		fileNames.Add(fileName);
 	}
-	private async Task CompileCode()
-	{
-
-		await userFileService.SaveFileContentsAsync(fileName: selectedFile, fileContent: codeContent, userId: userId, projectId: ProjectId);
-		string fileExtension = Path.GetExtension(selectedFile);
-		var result = await compilerService.CompileCodeAsync(await userFileService.GetLanguageByExtension(fileExtension),userId, ProjectId);
-
-		if (result.IsSuccess)
-		{
-			compilationResult = result.Data;
-		}
-		else
-		{
-			compilationResult = new CompilationResult
-			{
-				Success = false,
-				Errors = result.ErrorMessage,
-				Output = string.Empty
-			};
-		}
-		StateHasChanged();
-	}
+	
 	private async Task SaveCode(string newCodeContent)
 	{
 		codeContent = newCodeContent;
