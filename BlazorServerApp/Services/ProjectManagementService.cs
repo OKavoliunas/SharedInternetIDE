@@ -35,7 +35,7 @@ namespace BlazorServerApp.Services
 
             await userFileService.CreateDefaultProjectDirectoriesAsync(userId, projectId);
 
-            await userFileService.CreateFile(userId, projectId, args.FileName, args.Extension);
+            await userFileService.CreateDefaultProjectFiles(userId,projectId);
 
             return projectId;
         }
