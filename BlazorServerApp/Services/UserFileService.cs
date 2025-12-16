@@ -21,7 +21,7 @@ namespace BlazorServerApp.Services
 
             try
             {
-                if (!Directory.Exists(projectDirectoryPath)) 
+                if (!Directory.Exists(projectDirectoryPath))  // Pažeidžia DRY
                 {
                     Directory.CreateDirectory(projectDirectoryPath);
                 }
@@ -29,7 +29,7 @@ namespace BlazorServerApp.Services
                 foreach (string subDir in subDirs)
                 {
                     string subDirPath = Path.Combine(projectDirectoryPath, subDir);
-                    if (!Directory.Exists(subDirPath))
+                    if (!Directory.Exists(subDirPath)) // Pažeidžia DRY
                     {
                         Directory.CreateDirectory(subDirPath);
                     }
@@ -37,19 +37,20 @@ namespace BlazorServerApp.Services
             }
             catch (Exception ex) 
             {
-                throw ex;
+                Console.WriteLine(ex.ToString());
+                throw;
             }
             await Task.CompletedTask;
         }
         public async Task CreateFile(string userId, int projectId, string fileName, string fileExtension, string directory = "") 
         {
-            if (string.IsNullOrEmpty(userId))
+            if (string.IsNullOrEmpty(userId)) 
                 throw new ArgumentNullException(nameof(userId));
 
-            string projectDirectory = GetProjectDirectoryPath(userId,projectId);
+            string projectDirectory = GetProjectDirectoryPath(userId,projectId); // Single Responsibility?, Direktorijos traukimas != CreateFile
             const string sourceCodeDirectory = "SourceCode";
             
-            string fullFilePath = Path.Combine(projectDirectory,sourceCodeDirectory, directory,  fileName + fileExtension);
+            string fullFilePath = Path.Combine(projectDirectory,sourceCodeDirectory, directory,  fileName + fileExtension); // Vėl Single Responsibility?, Direktorijos kūrimas != CreateFile
 
             if (File.Exists(fullFilePath))
                 Console.WriteLine("A file with that name already exists in this directory");
@@ -77,14 +78,15 @@ namespace BlazorServerApp.Services
         {
             try
             {
+                // Single Responsibility Principle, metodas tikrina autentifikaciją
                 if (await projectDbService.IsProjectOwnedByUser(userId, projectId))
                 {
                     List<String> fileNames = await GetProjectFileNames(userId, projectId);
-                    if (fileNames.Contains(fileName))
+                    if (fileNames.Contains(fileName)) // Single Responsibility Principle, metodas tikrina ar failas egzistuoja direktorijoje
                     {
                         const string CODE_DIRECTORY = "SourceCode";
-                        string fullFilePath = Path.Combine(GetProjectDirectoryPath(userId, projectId),CODE_DIRECTORY,fileName) ;
-                        File.WriteAllText(fullFilePath, fileContent);
+                        string fullFilePath = Path.Combine(GetProjectDirectoryPath(userId, projectId),CODE_DIRECTORY,fileName); // Single Responsibility Principle, metodas kombinuoja file path
+                        await File.WriteAllTextAsync(fullFilePath, fileContent);// Single Responsibility Principle, metodas saugo failą
                     }
                     else 
                     {

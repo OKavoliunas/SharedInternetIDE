@@ -13,7 +13,7 @@ namespace BlazorServerApp.Services
         {
             this.applicationDbContext = applicationDbContext;
         }
-        public async Task<int> CreateProjectInDatabaseAsync(string userId, string projectName, string language, string? description = null)
+        public async Task<int> CreateProjectInDatabaseAsync(string userId, string projectName, string language, string? description = "")
         {
             if (string.IsNullOrWhiteSpace(userId))
                 throw new ArgumentNullException(nameof(userId));
