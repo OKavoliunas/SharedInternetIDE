@@ -8,10 +8,12 @@ namespace BlazorServerApp.Services
     {
         private readonly string BASE_PATH;
         private readonly ProjectDbService projectDbService;
-        public UserFileService(IConfiguration configuration, ProjectDbService projectDbService) 
+        private readonly ILogger<UserFileService> logger;
+        public UserFileService(IConfiguration configuration, ProjectDbService projectDbService, ILogger<UserFileService> logger) 
         {
             BASE_PATH = configuration["FileStorage:Basepath"] ?? "D:/CompilerApp/StoredFiles";
             this.projectDbService = projectDbService ?? throw new ArgumentNullException(nameof(projectDbService));
+            this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
         public async Task CreateDefaultProjectDirectoriesAsync(string userId, int projectId) 
         {
@@ -47,13 +49,13 @@ namespace BlazorServerApp.Services
             if (string.IsNullOrEmpty(userId)) 
                 throw new ArgumentNullException(nameof(userId));
 
-            string projectDirectory = GetProjectDirectoryPath(userId,projectId); // Single Responsibility?, Direktorijos traukimas != CreateFile
+            string projectDirectory = GetProjectDirectoryPath(userId,projectId);
             const string sourceCodeDirectory = "SourceCode";
             
-            string fullFilePath = Path.Combine(projectDirectory,sourceCodeDirectory, directory,  fileName + fileExtension); // Vėl Single Responsibility?, Direktorijos kūrimas != CreateFile
+            string fullFilePath = Path.Combine(projectDirectory,sourceCodeDirectory, directory,  fileName + fileExtension);
 
             if (File.Exists(fullFilePath))
-                Console.WriteLine("A file with that name already exists in this directory");
+                logger.LogWarning("A file with that name already exists in this directory");
             else 
             {
                 using (FileStream fs = new FileStream(fullFilePath, FileMode.Create, FileAccess.Write)) 
@@ -61,13 +63,16 @@ namespace BlazorServerApp.Services
                     using (StreamWriter wr = new StreamWriter(fs)) 
                     {
                         var language = await GetLanguageByExtension(fileExtension);
-                        await wr.WriteAsync(await GetCodePreset(language, fileName, await projectDbService.GetProjectById(projectId)));
+                        
+                        var project = await projectDbService.GetProjectById(projectId);
+                        var preset = await GetCodePreset(language, fileName, project);
+
+                        await wr.WriteAsync(preset);
                     }
                 }
             }
-            await Task.CompletedTask;
         }
-        public string GetProjectDirectoryPath(string userId, int projectId)
+        public virtual string GetProjectDirectoryPath(string userId, int projectId)
         {
             string userDirectoryName = "User_" + userId;
             string projectDirectoryName = "Project_" + projectId;
@@ -170,7 +175,7 @@ namespace BlazorServerApp.Services
             }
             return string.Empty;
         }
-        public async Task DeleteProjectDirectoriesAsync(string userId, int projectId)
+        public void DeleteProjectDirectories(string userId, int projectId)
         {
 
             const bool DELETESUBDIRECTORIES = true;
@@ -187,16 +192,17 @@ namespace BlazorServerApp.Services
                     {
                         File.Delete(file);
                     }
-                    await Task.Run(() => Directory.Delete(projectDirectoryPath, DELETESUBDIRECTORIES));
+                    Directory.Delete(projectDirectoryPath, DELETESUBDIRECTORIES);
                 }
                 else
                 {
-                    Console.WriteLine($"Project directory not found: {projectDirectoryPath}");
+                    logger.LogWarning($"Project directory not found: {projectDirectoryPath}", projectDirectoryPath);
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error deleting project directory: {ex.Message}");
+                logger.LogError($"Error deleting project directory: {projectDirectoryPath}", projectDirectoryPath);
+                throw;
             }
         }
         public Task<String> GetExtensionByLanguage(String language)

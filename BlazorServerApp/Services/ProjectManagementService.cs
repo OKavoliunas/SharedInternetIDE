@@ -55,7 +55,7 @@ namespace BlazorServerApp.Services
                     throw new ArgumentNullException(nameof(userId));
                 }
                 await projectDbService.DeleteProjectFromDatabaseAsync(userId, projectId);
-                await userFileService.DeleteProjectDirectoriesAsync(userId, projectId);
+                await userFileService.DeleteProjectDirectories(userId, projectId);
             }
             catch (Exception ex) 
             {
