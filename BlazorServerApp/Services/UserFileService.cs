@@ -8,54 +8,125 @@ namespace BlazorServerApp.Services
     {
         private readonly string BASE_PATH;
         private readonly ProjectDbService projectDbService;
-        private readonly ILogger<UserFileService> logger;
-        public UserFileService(IConfiguration configuration, ProjectDbService projectDbService, ILogger<UserFileService> logger) 
+
+
+        private readonly IFileSystem fileSystem;
+        public UserFileService(
+            IConfiguration configuration,
+            ProjectDbService projectDbService,
+            IFileSystem fileSystem)
         {
-            BASE_PATH = configuration["FileStorage:Basepath"] ?? "D:/CompilerApp/StoredFiles";
-            this.projectDbService = projectDbService ?? throw new ArgumentNullException(nameof(projectDbService));
-            this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            if (configuration == null)
+            {
+                throw new ArgumentNullException(nameof(configuration));
+            }
+
+            string? basePath = configuration["FileStorage:Basepath"];
+            if (string.IsNullOrWhiteSpace(basePath))
+            {
+                throw new InvalidOperationException("Base path is not configured");
+            }
+            BASE_PATH = basePath;
+
+            if (projectDbService == null)
+            {
+                throw new ArgumentNullException(nameof(projectDbService));
+            }
+            this.projectDbService = projectDbService;
+
+            if (fileSystem == null)
+            {
+                throw new ArgumentNullException(nameof(fileSystem));
+            }
+            this.fileSystem = fileSystem;
         }
-        public async Task CreateDefaultProjectDirectoriesAsync(string userId, int projectId) 
+        public interface IFileSystem
         {
-            if(string.IsNullOrEmpty(userId))
+            void CreateDirectory(string path);
+        }
+        private static string[] subDirs = { "SourceCode", "Inputs", "Outputs", "Logs" };
+        private static void CheckProjectDirectoriesInput(string userId, int projectId)
+        {
+            if (string.IsNullOrWhiteSpace(userId))
                 throw new ArgumentNullException(nameof(userId));
-            string projectDirectoryPath = GetProjectDirectoryPath(userId, projectId);
+
+            if (projectId <= 0)
+                throw new ArgumentOutOfRangeException(nameof(projectId));
+        }
+        private void CreateDirectoryWithSubdirectories(
+            string basePath,
+            IEnumerable<string> subDirectories)
+        {
+            fileSystem.CreateDirectory(basePath);
+
+            foreach (var subDir in subDirectories) { fileSystem.CreateDirectory(Path.Combine(basePath, subDir)); }
+        }
+
+
+        private const string CODE_DIRECTORY = "SourceCode";
+        private async Task<bool> UserOwnsProject(string userId, int projectId)
+        {
+            return await projectDbService.IsProjectOwnedByUser(userId, projectId);
+        }
+        private string GetSourceCodeFilePath(string userId, int projectId, string fileName)
+        {
+            return Path.Combine(
+                GetProjectDirectoryPath(userId, projectId),
+                CODE_DIRECTORY,
+                fileName
+            );
+        }
+        private async Task<string?> ReadFileSafelyAsync(string filePath)
+        {
+            if (!File.Exists(filePath))
+                return null;
 
             try
             {
-                if (!Directory.Exists(projectDirectoryPath))  // Pažeidžia DRY
-                {
-                    Directory.CreateDirectory(projectDirectoryPath);
-                }
-                string[] subDirs = { "SourceCode", "Inputs", "Outputs", "Logs" };
-                foreach (string subDir in subDirs)
-                {
-                    string subDirPath = Path.Combine(projectDirectoryPath, subDir);
-                    if (!Directory.Exists(subDirPath)) // Pažeidžia DRY
-                    {
-                        Directory.CreateDirectory(subDirPath);
-                    }
-                }
+                return await File.ReadAllTextAsync(filePath);
             }
-            catch (Exception ex) 
+            catch (IOException)
             {
-                Console.WriteLine(ex.ToString());
-                throw;
+                return null;
             }
-            await Task.CompletedTask;
         }
+
+
+
+
+        public UserFileService(IConfiguration configuration, ProjectDbService projectDbService) 
+        {
+            BASE_PATH = configuration["FileStorage:Basepath"] ?? "D:/CompilerApp/StoredFiles";
+            this.projectDbService = projectDbService ?? throw new ArgumentNullException(nameof(projectDbService));
+        }
+
+
+
+        public Task CreateDefaultProjectDirectoriesAsync(string userId, int projectId)
+        {
+            CheckProjectDirectoriesInput(userId, projectId);
+
+            string projectDirectoryPath = GetProjectDirectoryPath(userId, projectId);
+
+            CreateDirectoryWithSubdirectories(projectDirectoryPath, subDirs);
+
+            return Task.CompletedTask;
+        }
+
+
+
         public async Task CreateFile(string userId, int projectId, string fileName, string fileExtension, string directory = "") 
         {
             if (string.IsNullOrEmpty(userId)) 
                 throw new ArgumentNullException(nameof(userId));
 
-            string projectDirectory = GetProjectDirectoryPath(userId,projectId);
+            string projectDirectory = GetProjectDirectoryPath(userId,projectId); // Single Responsibility?, Direktorijos traukimas != CreateFile
             const string sourceCodeDirectory = "SourceCode";
             
-            string fullFilePath = Path.Combine(projectDirectory,sourceCodeDirectory, directory,  fileName + fileExtension);
+            string fullFilePath = Path.Combine(projectDirectory,sourceCodeDirectory, directory,  fileName + fileExtension); // Vėl Single Responsibility?, Direktorijos kūrimas != CreateFile
 
             if (File.Exists(fullFilePath))
-                logger.LogWarning("A file with that name already exists in this directory");
+                Console.WriteLine("A file with that name already exists in this directory");
             else 
             {
                 using (FileStream fs = new FileStream(fullFilePath, FileMode.Create, FileAccess.Write)) 
@@ -63,16 +134,13 @@ namespace BlazorServerApp.Services
                     using (StreamWriter wr = new StreamWriter(fs)) 
                     {
                         var language = await GetLanguageByExtension(fileExtension);
-                        
-                        var project = await projectDbService.GetProjectById(projectId);
-                        var preset = await GetCodePreset(language, fileName, project);
-
-                        await wr.WriteAsync(preset);
+                        await wr.WriteAsync(await GetCodePreset(language, fileName, await projectDbService.GetProjectById(projectId)));
                     }
                 }
             }
+            await Task.CompletedTask;
         }
-        public virtual string GetProjectDirectoryPath(string userId, int projectId)
+        public string GetProjectDirectoryPath(string userId, int projectId)
         {
             string userDirectoryName = "User_" + userId;
             string projectDirectoryName = "Project_" + projectId;
@@ -144,38 +212,39 @@ namespace BlazorServerApp.Services
             }
             return fileNames;
         }
-        public async Task<string> GetFileContentAsync(string userId,int projectId, string fileName) 
+
+
+
+        public async Task<string?> GetFileContentAsync(string userId, int projectId, string fileName)
         {
-            const string CODE_DIRECTORY = "SourceCode";
-            if (await projectDbService.IsProjectOwnedByUser(userId, projectId))
+            if (string.IsNullOrWhiteSpace(userId))
+                throw new ArgumentNullException(nameof(userId));
+
+            if (string.IsNullOrWhiteSpace(fileName))
+                throw new ArgumentNullException(nameof(fileName));
+
+            if (!await UserOwnsProject(userId, projectId))
             {
-                string projectDirectoryPath = GetProjectDirectoryPath(userId, projectId);
-                string filePath = Path.Combine(projectDirectoryPath,CODE_DIRECTORY, fileName);
-                try
-                {
-                    if (File.Exists(filePath))
-                    {
-                        return await File.ReadAllTextAsync(filePath);
-                    }
-                    else
-                    {
-                        Console.WriteLine($"File not found {filePath}");
-                        return string.Empty;
-                    }
-                }
-                catch (Exception ex) 
-                {
-                    Console.WriteLine($"Error reading file: {ex.Message}");
-                }
-                return string.Empty;
+                Console.WriteLine($"User {userId} does not own project {projectId}");
+                return null;
             }
-            else 
+
+            string filePath = GetSourceCodeFilePath(userId, projectId, fileName);
+
+            var content = await ReadFileSafelyAsync(filePath);
+            if (content == null)
             {
-                Console.WriteLine($"User with UserId: {userId}  doesn't own project with ProjectId: {projectId}");
+                Console.WriteLine($"Could not read file: {fileName}");
             }
-            return string.Empty;
+
+            return content;
         }
-        public void DeleteProjectDirectories(string userId, int projectId)
+
+
+
+
+
+        public async Task DeleteProjectDirectoriesAsync(string userId, int projectId)
         {
 
             const bool DELETESUBDIRECTORIES = true;
@@ -192,17 +261,16 @@ namespace BlazorServerApp.Services
                     {
                         File.Delete(file);
                     }
-                    Directory.Delete(projectDirectoryPath, DELETESUBDIRECTORIES);
+                    await Task.Run(() => Directory.Delete(projectDirectoryPath, DELETESUBDIRECTORIES));
                 }
                 else
                 {
-                    logger.LogWarning($"Project directory not found: {projectDirectoryPath}", projectDirectoryPath);
+                    Console.WriteLine($"Project directory not found: {projectDirectoryPath}");
                 }
             }
             catch (Exception ex)
             {
-                logger.LogError($"Error deleting project directory: {projectDirectoryPath}", projectDirectoryPath);
-                throw;
+                Console.WriteLine($"Error deleting project directory: {ex.Message}");
             }
         }
         public Task<String> GetExtensionByLanguage(String language)
