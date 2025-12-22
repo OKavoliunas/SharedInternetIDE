@@ -4,6 +4,8 @@ using System.IO;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 using BlazorServerApp.Services;
 using BlazorServerApp.Models;
@@ -17,8 +19,8 @@ namespace BlazorServerApp.Tests
         {
             private readonly string FORCED_PATH;
 
-            public TestUserFileService(IConfiguration configuration, ProjectDbService projectDbService, string forcedPath)
-                : base(configuration, projectDbService)
+            public TestUserFileService(IConfiguration configuration, ProjectDbService projectDbService, string forcedPath, ILogger<UserFileService> logger)
+                : base(configuration, projectDbService, logger)
             {
                 FORCED_PATH = forcedPath;
             }
@@ -79,7 +81,7 @@ namespace BlazorServerApp.Tests
             string tempDir = Path.Combine(Path.GetTempPath(), "ufstest_" + Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(Path.Combine(tempDir, "SourceCode"));
 
-            TestUserFileService userFileService = new TestUserFileService(configuration, projectDbService, tempDir);
+            TestUserFileService userFileService = new TestUserFileService(configuration, projectDbService, tempDir, NullLogger<UserFileService>.Instance);
 
             await Assert.ThrowsAsync<ArgumentNullException>(() => userFileService.CreateFile(userId, 1, "Main", ".c"));
         }
@@ -93,7 +95,7 @@ namespace BlazorServerApp.Tests
             string tempDir = Path.Combine(Path.GetTempPath(), "ufstest_" + Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(Path.Combine(tempDir, "SourceCode"));
 
-            TestUserFileService userFileService = new TestUserFileService(configuration, projectDbService, tempDir);
+            TestUserFileService userFileService = new TestUserFileService(configuration, projectDbService, tempDir, NullLogger<UserFileService>.Instance);
 
             await userFileService.CreateFile("u1", 1, "Main", ".c");
 
@@ -116,7 +118,7 @@ namespace BlazorServerApp.Tests
             string existingPath = Path.Combine(tempDir, "SourceCode", "Main.c");
             await File.WriteAllTextAsync(existingPath, "DO_NOT_OVERWRITE");
 
-            TestUserFileService userFileService = new TestUserFileService(configuration, projectDbService, tempDir);
+            TestUserFileService userFileService = new TestUserFileService(configuration, projectDbService, tempDir, NullLogger<UserFileService>.Instance);
 
             await userFileService.CreateFile("u1", 1, "Main", ".c");
 
@@ -133,7 +135,7 @@ namespace BlazorServerApp.Tests
             string tempDir = Path.Combine(Path.GetTempPath(), "ufstest_" + Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(Path.Combine(tempDir, "SourceCode", "Sub"));
 
-            TestUserFileService userFileService = new TestUserFileService(configuration, projectDbService, tempDir);
+            TestUserFileService userFileService = new TestUserFileService(configuration, projectDbService, tempDir, NullLogger<UserFileService>.Instance);
 
             await userFileService.CreateFile("u1", 2, "Main", ".c", "Sub");
 

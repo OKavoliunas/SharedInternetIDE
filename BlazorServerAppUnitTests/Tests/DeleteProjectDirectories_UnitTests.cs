@@ -9,6 +9,8 @@ using System.Threading.Tasks;
 using Xunit;
 using BlazorServerApp.Data;
 using BlazorServerApp.Services;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 namespace BlazorServerApp.Tests
 {
     public class UserFileServiceTests
@@ -17,8 +19,8 @@ namespace BlazorServerApp.Tests
         {
             private readonly string FORCED_PATH;
 
-            public TestUserFileService(IConfiguration configuration, ProjectDbService projectDbService, string forcedPath)
-                : base(configuration, projectDbService)
+            public TestUserFileService(IConfiguration configuration, ProjectDbService projectDbService, string forcedPath, ILogger<UserFileService> logger)
+                : base(configuration, projectDbService, logger)
             {
                 FORCED_PATH = forcedPath;
             }
@@ -64,10 +66,10 @@ namespace BlazorServerApp.Tests
             ApplicationDbContext db = CreateInMemoryDb();
             ProjectDbService projectDbService = new ProjectDbService(db);
 
-            TestUserFileService userFileService = new TestUserFileService(configuration, projectDbService, tempDir);
+            TestUserFileService userFileService = new TestUserFileService(configuration, projectDbService, tempDir, NullLogger<UserFileService>.Instance);
 
 
-            await userFileService.DeleteProjectDirectories("anyUser", 1);
+            userFileService.DeleteProjectDirectories("anyUser", 1);
 
             Assert.False(Directory.Exists(tempDir));
         }
@@ -79,9 +81,9 @@ namespace BlazorServerApp.Tests
             IConfiguration configuration = GetTestConfiguration();
             ProjectDbService projectDbService = new ProjectDbService(CreateInMemoryDb());
 
-            TestUserFileService userFileService = new TestUserFileService(configuration, projectDbService, Path.GetTempPath());
+            TestUserFileService userFileService = new TestUserFileService(configuration, projectDbService, Path.GetTempPath(), NullLogger<UserFileService>.Instance);
 
-            await Assert.ThrowsAsync<ArgumentNullException>(() => userFileService.DeleteProjectDirectories(userId, 1));
+            Assert.Throws<ArgumentNullException>(() => userFileService.DeleteProjectDirectories(userId, 1));
         }
         [Fact]
         public async Task DeleteProjectDirectoriesAsync_DoesNotThrow_WhenDirectoryMissing()
@@ -91,9 +93,9 @@ namespace BlazorServerApp.Tests
             IConfiguration configuration = GetTestConfiguration();
             ProjectDbService projectDbService = new ProjectDbService(CreateInMemoryDb());
 
-            TestUserFileService userFileService = new TestUserFileService(configuration, projectDbService, missingDir);
+            TestUserFileService userFileService = new TestUserFileService(configuration, projectDbService, missingDir, NullLogger<UserFileService>.Instance);
 
-            await userFileService.DeleteProjectDirectories("u1", 1);
+            userFileService.DeleteProjectDirectories("u1", 1);
             //throw
             Assert.False(Directory.Exists(missingDir));
         }
@@ -105,9 +107,9 @@ namespace BlazorServerApp.Tests
             IConfiguration configuration = GetTestConfiguration();
             ProjectDbService projectDbService = new ProjectDbService(CreateInMemoryDb());
 
-            TestUserFileService userFileService = new TestUserFileService(configuration, projectDbService, invalidPath);
+            TestUserFileService userFileService = new TestUserFileService(configuration, projectDbService, invalidPath, NullLogger<UserFileService>.Instance);
             //doesnt throw
-            await userFileService.DeleteProjectDirectories("u1", 1);
+            userFileService.DeleteProjectDirectories("u1", 1);
         }
 
     }
