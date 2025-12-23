@@ -35,7 +35,7 @@ namespace BlazorServerApp.Tests.Services
             dbContext = new ApplicationDbContext(options);
             var projectDbService = new ProjectDbService(dbContext);
 
-            service = new UserFileService(configuration, projectDbService, NullLogger<UserFileService>.Instance);
+            service = new UserFileService(configuration, projectDbService);
         }
 
         //Jei naudotojas turi projektą ir failas egzistuoja, jį gražinti

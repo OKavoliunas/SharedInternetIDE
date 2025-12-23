@@ -23,7 +23,7 @@ namespace BlazorServerApp.Tests.Services
 
             var projectDbMock = new Mock<ProjectDbService>(null!);
 
-            service = new UserFileService(configMock.Object, projectDbMock.Object, NullLogger<UserFileService>.Instance);
+            service = new UserFileService(configMock.Object, projectDbMock.Object);
         }
 
         //Ar userID == null
