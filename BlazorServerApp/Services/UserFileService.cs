@@ -4,6 +4,14 @@ using BlazorServerApp.Services;
 using BlazorServerApp.Models;
 namespace BlazorServerApp.Services
 {
+    public class FileSystem : UserFileService.IFileSystem
+    {
+        public void CreateDirectory(string path)
+        {
+            Directory.CreateDirectory(path);
+        }
+    }
+
     public class UserFileService
     {
         private readonly string BASE_PATH;
@@ -22,11 +30,14 @@ namespace BlazorServerApp.Services
             }
 
             string? basePath = configuration["FileStorage:Basepath"];
-            if (string.IsNullOrWhiteSpace(basePath))
+            if (string.IsNullOrEmpty(basePath))
             {
-                throw new InvalidOperationException("Base path is not configured");
+                BASE_PATH = "D:/CompilerApp/StoredFiles";
             }
-            BASE_PATH = basePath;
+            else
+            {
+                BASE_PATH = basePath;
+            }
 
             if (projectDbService == null)
             {
@@ -91,13 +102,16 @@ namespace BlazorServerApp.Services
             }
         }
 
-
-
-
-        public UserFileService(IConfiguration configuration, ProjectDbService projectDbService) 
+        public UserFileService(
+            IConfiguration configuration,
+            ProjectDbService projectDbService
+        )
+            : this(
+                configuration,
+                projectDbService,
+                new FileSystem()
+              )
         {
-            BASE_PATH = configuration["FileStorage:Basepath"] ?? "D:/CompilerApp/StoredFiles";
-            this.projectDbService = projectDbService ?? throw new ArgumentNullException(nameof(projectDbService));
         }
 
 
@@ -226,7 +240,7 @@ namespace BlazorServerApp.Services
             if (!await UserOwnsProject(userId, projectId))
             {
                 Console.WriteLine($"User {userId} does not own project {projectId}");
-                return null;
+                return string.Empty;
             }
 
             string filePath = GetSourceCodeFilePath(userId, projectId, fileName);
@@ -235,6 +249,7 @@ namespace BlazorServerApp.Services
             if (content == null)
             {
                 Console.WriteLine($"Could not read file: {fileName}");
+                return string.Empty;
             }
 
             return content;
