@@ -2,6 +2,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.AspNetCore.Identity;
+using System.Collections.Generic;
 
 namespace BlazorServerApp.Models
 {
@@ -23,7 +24,9 @@ namespace BlazorServerApp.Models
         [Required]
         [MaxLength(255)]
         public string Language { get; set; }
-        public string Description { get; set; }
+        public string? Description { get; set; }
+
+        public ICollection<ProjectAccess> ProjectAccesses { get; set; } = new List<ProjectAccess>();
 
         [Required]
         public DateTime CreationDate { get; set; } = DateTime.UtcNow;

@@ -106,7 +106,7 @@
 		userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
 
 
-		if (await projectDbService.IsProjectOwnedByUser(userId, ProjectId))
+		if (await projectDbService.UserHasAccessToProjectAsync(userId, ProjectId))
 		{
 
 			currentProject = await projectDbService.GetProjectById(ProjectId);

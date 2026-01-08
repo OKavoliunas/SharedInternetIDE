@@ -77,7 +77,7 @@ namespace BlazorServerApp.Services
         {
             try
             {
-                if (await projectDbService.IsProjectOwnedByUser(userId, projectId))
+                if (await projectDbService.UserHasAccessToProjectAsync(userId, projectId))
                 {
                     List<String> fileNames = await GetProjectFileNames(userId, projectId);
                     if (fileNames.Contains(fileName))
@@ -105,7 +105,7 @@ namespace BlazorServerApp.Services
         {
             List<String> fileNames = new List<String>();
             const string CODE_DIRECTORY = "SourceCode";
-            if (await projectDbService.IsProjectOwnedByUser(userId, projectId))
+            if (await projectDbService.UserHasAccessToProjectAsync(userId, projectId))
             {
                 string projectDirectory = Path.Combine(GetProjectDirectoryPath(userId, projectId),CODE_DIRECTORY);
 
@@ -140,7 +140,7 @@ namespace BlazorServerApp.Services
         public async Task<string> GetFileContentAsync(string userId,int projectId, string fileName) 
         {
             const string CODE_DIRECTORY = "SourceCode";
-            if (await projectDbService.IsProjectOwnedByUser(userId, projectId))
+            if (await projectDbService.UserHasAccessToProjectAsync(userId, projectId))
             {
                 string projectDirectoryPath = GetProjectDirectoryPath(userId, projectId);
                 string filePath = Path.Combine(projectDirectoryPath,CODE_DIRECTORY, fileName);

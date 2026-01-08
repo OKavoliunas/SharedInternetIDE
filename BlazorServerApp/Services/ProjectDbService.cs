@@ -20,33 +20,47 @@ namespace BlazorServerApp.Services
             if (string.IsNullOrWhiteSpace(projectName))
                 throw new ArgumentNullException(nameof(projectName));
 
-            var project = new Project
-            {
-                UserID = userId,
-                Name = projectName,
-                Language = language,
-                Description = description,
-                CreationDate = DateTime.UtcNow
-            };
+            await using var tx = await applicationDbContext.Database.BeginTransactionAsync();
             try
             {
-                applicationDbContext.Add(project);
-            }
-            catch (Exception ex) 
-            {
-                throw new Exception($"An exception occured while trying to add project: {ex}");
-            }
-            try 
-            {
+                var project = new Project
+                {
+                    UserID = userId,
+                    Name = projectName,
+                    Language = language,
+                    Description = description,
+                    CreationDate = DateTime.UtcNow
+                };
+
+                applicationDbContext.Projects.Add(project);
                 await applicationDbContext.SaveChangesAsync();
+
+                applicationDbContext.ProjectAccesses.Add(new ProjectAccess
+                {
+                    ProjectID = project.ProjectID,
+                    UserID = userId
+                });
+
+                await applicationDbContext.SaveChangesAsync();
+                await tx.CommitAsync();
+
+                return project.ProjectID;
             }
             catch (Exception ex)
             {
-                throw new Exception($"An exception occured while trying to save the project {ex}");
+                await tx.RollbackAsync();
+                throw new Exception($"An exception occured while trying to create project/access: {ex}");
             }
-
-            return project.ProjectID;
         }
+        public async Task<bool> UserHasAccessToProjectAsync(string userId, int projectId)
+        {
+            if (string.IsNullOrWhiteSpace(userId))
+                throw new ArgumentNullException(nameof(userId));
+
+            return await applicationDbContext.ProjectAccesses
+                .AnyAsync(x => x.UserID == userId && x.ProjectID == projectId);
+        }
+
         public async Task<bool> IsProjectOwnedByUser(string userId, int projectId) 
         {
             try
@@ -61,23 +75,23 @@ namespace BlazorServerApp.Services
             }
                 return false;
         }
-        public async Task<List<Project>> GetProjectsByUserIdAsync(string userId) 
+        public async Task<List<Project>> GetProjectsByUserIdAsync(string userId)
         {
-            List<Project> projectList = new List<Project>();
             if (string.IsNullOrWhiteSpace(userId))
-                    throw new ArgumentNullException(nameof(userId));
+                throw new ArgumentNullException(nameof(userId));
+
             try
             {
-                projectList = await applicationDbContext.Projects
-                .Where(p => p.UserID == userId)
-                .OrderByDescending(p => p.CreationDate)
-                .ToListAsync();
+                return await applicationDbContext.Projects
+                    .AsNoTracking()
+                    .Where(p => p.ProjectAccesses.Any(pa => pa.UserID == userId))
+                    .OrderByDescending(p => p.CreationDate)
+                    .ToListAsync();
             }
-            catch (Exception ex) 
+            catch (Exception ex)
             {
-                throw new Exception($"An exception occured while trying to retrieve user's with Id: {userId} projects: {ex}");
+                throw new Exception($"An exception occured while trying to retrieve projects for user {userId}: {ex}");
             }
-            return projectList;
         }
         public string GetProjectLanguage(Project project) 
         {

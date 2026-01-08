@@ -1,0 +1,401 @@
+﻿@page "/admin/projects/{Id:int}"
+@using System.Security.Claims
+@using BlazorServerApp.Data
+@using BlazorServerApp.Models
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.EntityFrameworkCore
+@attribute [Authorize]
+
+@inject ApplicationDbContext Db
+@inject AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager Nav
+
+<PageTitle>Admin - Project</PageTitle>
+
+@if (!_loaded)
+{
+    <p>Loading...</p>
+}
+else if (!_isAdmin)
+{
+    <h3>Access denied</h3>
+    <p>You do not have permission to view this page.</p>
+}
+else if (_projectNotFound)
+{
+    <h3>Project not found</h3>
+    <button type="button" class="admin-project-detail__back" @onclick="GoBack">Back</button>
+}
+else
+{
+    <div class="admin-project-detail">
+        <h1 class="admin-project-detail__title">Project Details</h1>
+
+        <div class="admin-project-detail__card">
+            <div class="admin-project-detail__row">
+                <div class="admin-project-detail__label">Name</div>
+                <div class="admin-project-detail__value">@_project!.Name</div>
+            </div>
+
+            <div class="admin-project-detail__row">
+                <div class="admin-project-detail__label">Creator</div>
+                <div class="admin-project-detail__value">
+                    @(string.IsNullOrWhiteSpace(_project!.User?.Email) ? _project!.UserID : _project!.User.Email)
+                </div>
+            </div>
+
+            <div class="admin-project-detail__row">
+                <div class="admin-project-detail__label">Creation date (UTC)</div>
+                <div class="admin-project-detail__value">@_project!.CreationDate.ToString("yyyy-MM-dd HH:mm")</div>
+            </div>
+
+            <div class="admin-project-detail__row">
+                <div class="admin-project-detail__label">Language</div>
+                <div class="admin-project-detail__value">@_project!.Language</div>
+            </div>
+
+            <div class="admin-project-detail__row">
+                <div class="admin-project-detail__label">Description</div>
+                <div class="admin-project-detail__value">
+                    @if (string.IsNullOrWhiteSpace(_project!.Description))
+                    {
+                        <span>-</span>
+                    }
+                    else
+                    {
+                        @_project!.Description
+                    }
+                </div>
+            </div>
+        </div>
+        <div class="admin-project-detail__card" style="margin-top:16px;">
+            <div class="admin-project-detail__row">
+                <div class="admin-project-detail__label">Users with access</div>
+                <div class="admin-project-detail__value">
+                    @if (_accessUsers.Count == 0)
+                    {
+                        <span>-</span>
+                    }
+                    else
+                    {
+                        <ul style="margin:0; padding-left:18px;">
+                            @foreach (var u in _accessUsers)
+                            {
+                                <li>@u</li>
+                            }
+                        </ul>
+                    }
+                </div>
+            </div>
+
+            <div class="admin-project-detail__row">
+                <div class="admin-project-detail__label">Manage access</div>
+                <div class="admin-project-detail__value">
+                    <button type="button"
+                            class="admin-project-detail__delete"
+                            @onclick="OpenAddUserModal"
+                            disabled="@(_saving || _project is null || _availableUsers.Count == 0)">
+                        Add user
+                    </button>
+
+                    @if (_availableUsers.Count == 0)
+                    {
+                        <div style="margin-top:8px;">No available users to add.</div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        @if (_messages.Count > 0)
+        {
+            <div class="admin-project-detail__messages">
+                @foreach (var m in _messages)
+                {
+                    <div class="admin-project-detail__message">@m</div>
+                }
+            </div>
+        }
+
+        <div class="admin-project-detail__actions">
+            <button type="button"
+                    class="admin-project-detail__back"
+                    @onclick="GoBack"
+                    disabled="@_saving">
+                Back
+            </button>
+
+            <button type="button"
+                    class="admin-project-detail__delete"
+                    @onclick="OpenDeleteModal"
+                    disabled="@(_saving || _project is null)">
+                Delete
+            </button>
+        </div>
+    </div>
+    @if (_showAddUserModal)
+    {
+        <div class="modal-overlay" @onclick="CloseAddUserModal">
+            <div class="modal" @onclick:stopPropagation="true">
+                <h2 class="modal__title">Add user to project</h2>
+
+                <p class="modal__text">
+                    Select a user to grant access to:
+                    <br />
+                    <strong>@_project!.Name</strong>
+                </p>
+
+                <div style="margin: 12px 0;">
+                    <label for="userSelect" style="display:block; margin-bottom:6px;">User (email)</label>
+                    <select id="userSelect" @bind="_selectedUserId" style="width:100%; padding:10px; border-radius:10px; border:1px solid rgba(0,0,0,0.18);">
+                        <option value="">-- Select a user --</option>
+                        @foreach (var u in _availableUsers)
+                        {
+                            <option value="@u.Id">@u.Email</option>
+                        }
+                    </select>
+                </div>
+
+                <div class="modal__actions">
+                    <button type="button"
+                            class="modal__cancel"
+                            @onclick="CloseAddUserModal"
+                            disabled="@_saving">
+                        Cancel
+                    </button>
+
+                    <button type="button"
+                            class="modal__danger"
+                            @onclick="AddUserToProjectAsync"
+                            @onclick:stopPropagation="true"
+                            disabled="@(_saving || string.IsNullOrWhiteSpace(_selectedUserId))">
+                        @(_saving ? "Adding..." : "Add")
+                    </button>
+                </div>
+            </div>
+        </div>
+    }
+
+    @if (_showDeleteModal)
+    {
+        <div class="modal-overlay" @onclick="CloseDeleteModal">
+            <div class="modal" @onclick:stopPropagation="true">
+                <h2 class="modal__title">Delete project?</h2>
+
+                <p class="modal__text">
+                    This action cannot be undone.
+                    <br />
+                    <strong>@_project!.Name</strong>
+                </p>
+
+                <div class="modal__actions">
+                    <button type="button"
+                            class="modal__cancel"
+                            @onclick="CloseDeleteModal"
+                            disabled="@_saving">
+                        Cancel
+                    </button>
+
+                    <button type="button"
+                            class="modal__danger"
+                            @onclick="DeleteProjectAsync"
+                            @onclick:stopPropagation="true"
+                            disabled="@(_saving || _project is null)">
+                        @(_saving ? "Deleting..." : "Yes, delete")
+                    </button>
+                </div>
+            </div>
+        </div>
+    }
+}
+
+@code {
+    [Parameter] public int Id { get; set; }
+
+    private bool _loaded;
+    private bool _isAdmin;
+    private bool _projectNotFound;
+    private bool _saving;
+    private bool _showDeleteModal;
+    private bool _showAddUserModal;
+    private string _selectedUserId = string.Empty;
+
+    private List<UserOption> _availableUsers = new();
+    private List<string> _accessUsers = new();
+
+    
+
+    private Project? _project;
+    private List<string> _messages = new();
+
+    private sealed class UserOption
+    {
+        public string Id { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+    }
+    protected override async Task OnParametersSetAsync()
+    {
+        _loaded = false;
+        _messages.Clear();
+        _projectNotFound = false;
+        _saving = false;
+        _showDeleteModal = false;
+
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var principal = authState.User;
+
+        if (principal?.Identity?.IsAuthenticated != true)
+        {
+            Nav.NavigateTo("/login", forceLoad: true);
+            return;
+        }
+
+        var currentUserId = principal.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        _isAdmin = await Db.Users
+            .AsNoTracking()
+            .Where(u => u.Id == currentUserId)
+            .Select(u => u.PermissionLevel)
+            .FirstOrDefaultAsync() == PermissionLevel.Admin;
+
+        if (!_isAdmin)
+        {
+            _loaded = true;
+            return;
+        }
+
+        _project = await Db.Projects
+            .Include(p => p.User)
+            .FirstOrDefaultAsync(p => p.ProjectID == Id);
+        if (_project != null)
+        {
+            await LoadProjectAccessDataAsync();
+        }
+
+        else
+        {
+            _projectNotFound = true;
+        }
+
+        _loaded = true;
+    }
+
+    private void GoBack() => Nav.NavigateTo("/admin/projects");
+
+    private void OpenDeleteModal()
+    {
+        _messages.Clear();
+        _showDeleteModal = true;
+    }
+
+    private void CloseDeleteModal() => _showDeleteModal = false;
+
+    private async Task DeleteProjectAsync()
+    {
+        if (_project == null)
+            return;
+
+        _saving = true;
+        _messages.Clear();
+
+        try
+        {
+            Db.Projects.Remove(_project);
+            await Db.SaveChangesAsync();
+
+            _showDeleteModal = false;
+            Nav.NavigateTo("/admin/projects", forceLoad: true);
+        }
+        catch (Exception ex)
+        {
+            _messages.Add($"Delete failed: {ex.Message}");
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+    private async Task LoadProjectAccessDataAsync()
+    {
+        var access = await Db.ProjectAccesses
+            .AsNoTracking()
+            .Where(pa => pa.ProjectID == Id)
+            .Include(pa => pa.User)
+            .ToListAsync();
+
+        var accessUserIds = access.Select(a => a.UserID).ToHashSet();
+
+        _accessUsers = access
+            .Select(a => a.User?.Email ?? a.User?.UserName ?? a.UserID)
+            .OrderBy(x => x)
+            .ToList();
+
+        _availableUsers = await Db.Users
+            .AsNoTracking()
+            .Where(u => !accessUserIds.Contains(u.Id))
+            .OrderBy(u => u.Email)
+            .Select(u => new UserOption
+            {
+                Id = u.Id,
+                Email = u.Email ?? u.UserName ?? u.Id
+            })
+            .ToListAsync();
+    }
+
+    private void OpenAddUserModal()
+    {
+        _messages.Clear();
+        _selectedUserId = string.Empty;
+        _showAddUserModal = true;
+    }
+
+    private void CloseAddUserModal()
+    {
+        _showAddUserModal = false;
+    }
+
+    private async Task AddUserToProjectAsync()
+    {
+        if (_project == null)
+            return;
+
+        if (string.IsNullOrWhiteSpace(_selectedUserId))
+            return;
+
+        _saving = true;
+        _messages.Clear();
+
+        try
+        {
+
+            var alreadyExists = await Db.ProjectAccesses.AnyAsync(pa =>
+                pa.ProjectID == Id && pa.UserID == _selectedUserId);
+
+            if (alreadyExists)
+            {
+                _messages.Add("That user already has access.");
+                return;
+            }
+
+            Db.ProjectAccesses.Add(new ProjectAccess
+            {
+                ProjectID = Id,
+                UserID = _selectedUserId
+            });
+
+            await Db.SaveChangesAsync();
+
+            _showAddUserModal = false;
+            await LoadProjectAccessDataAsync();
+            _messages.Add("User added successfully.");
+        }
+        catch (Exception ex)
+        {
+            _messages.Add($"Failed to add user: {ex.Message}");
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+}

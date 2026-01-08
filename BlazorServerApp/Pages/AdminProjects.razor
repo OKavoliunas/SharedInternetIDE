@@ -1,0 +1,129 @@
+﻿@page "/admin/projects"
+@using System.Security.Claims
+@using BlazorServerApp.Data
+@using BlazorServerApp.Models
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Routing
+
+@using Microsoft.EntityFrameworkCore
+@attribute [Authorize]
+
+@inject ApplicationDbContext Db
+@inject AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager Nav
+
+<PageTitle>Admin - Projects</PageTitle>
+
+@if (!_loaded)
+{
+    <p>Loading...</p>
+}
+else if (!_isAdmin)
+{
+    <h3>Access denied</h3>
+    <p>You do not have permission to view this page.</p>
+}
+else
+{
+    <div class="admin-projects-section">
+
+    <h1>Projects</h1>
+
+        @if (_projects.Count == 0)
+        {
+            <p>No projects found.</p>
+        }
+        else
+        {
+            <table class="admin-projects-table">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Creator</th>
+                        <th>Creation date (UTC)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var p in _projects)
+                    {
+                        <tr>
+                            <td>
+                                <NavLink class="admin-projects-link" href="@($"/admin/projects/{p.ProjectId}")">
+                                    @p.Name
+                                </NavLink>
+                            </td>
+                            <td>
+                                <NavLink class="admin-projects-link" href="@($"/admin/projects/{p.ProjectId}")">
+                                    @(string.IsNullOrWhiteSpace(p.CreatorEmail) ? p.CreatorId : p.CreatorEmail)
+                                </NavLink>
+                            </td>
+                            <td>
+                                <NavLink class="admin-projects-link" href="@($"/admin/projects/{p.ProjectId}")">
+                                    @p.CreationDateUtc.ToString("yyyy-MM-dd HH:mm")
+                                </NavLink>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+
+            </table>
+        }
+    </div>
+}
+
+@code {
+    private bool _loaded;
+    private bool _isAdmin;
+
+    private List<ProjectRow> _projects = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var principal = authState.User;
+
+        if (principal?.Identity?.IsAuthenticated != true)
+        {
+            Nav.NavigateTo("/login", forceLoad: true);
+            return;
+        }
+
+        var currentUserId = principal.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        _isAdmin = await Db.Users
+            .AsNoTracking()
+            .Where(u => u.Id == currentUserId)
+            .Select(u => u.PermissionLevel)
+            .FirstOrDefaultAsync() == PermissionLevel.Admin;
+
+        if (_isAdmin)
+        {
+            _projects = await Db.Projects
+                .AsNoTracking()
+                .Include(p => p.User)
+                .OrderByDescending(p => p.CreationDate)
+                .Select(p => new ProjectRow
+                {
+                    ProjectId = p.ProjectID,
+                    Name = p.Name,
+                    CreatorId = p.UserID,
+                    CreatorEmail = p.User.Email,
+                    CreationDateUtc = p.CreationDate
+                })
+                .ToListAsync();
+        }
+
+        _loaded = true;
+    }
+
+    private class ProjectRow
+    {
+        public int ProjectId { get; set; }
+        public string Name { get; set; } = string.Empty;
+
+        public string CreatorId { get; set; } = string.Empty;
+        public string? CreatorEmail { get; set; }
+
+        public DateTime CreationDateUtc { get; set; }
+    }
+}

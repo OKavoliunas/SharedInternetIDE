@@ -10,6 +10,8 @@ namespace BlazorServerApp.Data
             : base(options)
         {
         }
+        public DbSet<ProjectAccess> ProjectAccesses { get; set; } = default!;
+
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
@@ -17,6 +19,20 @@ namespace BlazorServerApp.Data
             builder.Entity<ApplicationUser>()
                    .Property(u => u.PermissionLevel)
                    .HasDefaultValue(PermissionLevel.User);
+            builder.Entity<ProjectAccess>(entity =>
+            {
+                entity.HasKey(x => new { x.ProjectID, x.UserID });
+
+                entity.HasOne(x => x.Project)
+                      .WithMany(p => p.ProjectAccesses)
+                      .HasForeignKey(x => x.ProjectID)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(x => x.User)
+                      .WithMany(u => u.ProjectAccesses)
+                      .HasForeignKey(x => x.UserID)
+                      .OnDelete(DeleteBehavior.Restrict);
+            });
 
             builder.Entity<Project>(entity =>
             {
@@ -41,7 +57,7 @@ namespace BlazorServerApp.Data
                 entity.HasOne(e => e.User)
                       .WithMany()
                       .HasForeignKey(e => e.UserID)
-                      .OnDelete(DeleteBehavior.Cascade);
+                      .OnDelete(DeleteBehavior.Restrict);
             });
         }
     }
