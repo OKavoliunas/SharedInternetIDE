@@ -3,6 +3,7 @@
 @inject AuthenticationStateProvider authenticationStateProvider
 @inject UserFileService userFileService
 @inject CompilerService compilerService
+@inject NavigationManager navigationManager
 @using Microsoft.AspNetCore.Components.Authorization
 @using System.Security.Claims
 @using BlazorServerApp.Services
@@ -19,9 +20,7 @@
 			@foreach(string fileName in fileNames)
 			{
 				<li class="file-entry">
-					<button @onclick="() => {
-					SelectFile(fileName);	
-					}">
+					<button @onclick="async () => await SelectFile(fileName)">
 						<div class="file-icon">
 							<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--!Font Awesome Free 6.7.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2024 Fonticons, Inc.--><path d="M0 64C0 28.7 28.7 0 64 0L224 0l0 128c0 17.7 14.3 32 32 32l128 0 0 288c0 35.3-28.7 64-64 64L64 512c-35.3 0-64-28.7-64-64L0 64zm384 64l-128 0L256 0 384 128z"/></svg>
 						</div>
@@ -76,8 +75,8 @@
 	private bool showAddFileModal = false;
 	private string newFileName;
 
-	private string userId;
-
+	private string currentUserId = string.Empty;
+	private string projectOwnerId = string.Empty;
 	CompilationResult compilationResult;
 	protected override void OnInitialized()
 	{
@@ -103,50 +102,70 @@
 	{
 		var authState = await authenticationStateProvider.GetAuthenticationStateAsync();
 		var user = authState.User;
-		userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
 
-
-		if (await projectDbService.UserHasAccessToProjectAsync(userId, ProjectId))
+		currentUserId = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
+		if (string.IsNullOrWhiteSpace(currentUserId))
 		{
+			navigationManager.NavigateTo("/login", forceLoad: true);
+			return;
+		}
 
-			currentProject = await projectDbService.GetProjectById(ProjectId);
-			fileNames = await userFileService.GetProjectFileNames(userId,ProjectId);
-			bool isFirst = true;
-			foreach (string	fileName in fileNames)
+		// Check access using the logged-in user
+		var hasAccess = await projectDbService.UserHasAccessToProjectAsync(currentUserId, ProjectId);
+		if (!hasAccess)
+		{
+			Console.WriteLine("User does not have access to this project.");
+			navigationManager.NavigateTo("/projects", forceLoad: true);
+			return;
+		}
+
+		currentProject = await projectDbService.GetProjectById(ProjectId);
+
+		projectOwnerId = currentProject.UserID;
+
+		fileNames = await userFileService.GetProjectFileNames(projectOwnerId, ProjectId);
+
+		bool isFirst = true;
+		foreach (string fileName in fileNames)
+		{
+			if (isFirst)
 			{
-				if (isFirst)
-				{
-					selectedFile = fileName;
-					isFirst = false;	
-				}
-				if (fileName == currentProject.Name + GetExtension(currentProject))
-				{
-					selectedFile = fileName;
-				}
-
+				selectedFile = fileName;
+				isFirst = false;
 			}
-			if (!string.IsNullOrEmpty(selectedFile))
-			{
-				language = currentProject.Language;
 
-				codeContent = await userFileService.GetFileContentAsync(userId, ProjectId, selectedFile);
-				isLoaded = true;
+			if (fileName == currentProject.Name + GetExtension(currentProject))
+			{
+				selectedFile = fileName;
 			}
 		}
 
+		if (!string.IsNullOrEmpty(selectedFile))
+		{
+			language = currentProject.Language;
+			codeContent = await userFileService.GetFileContentAsync(projectOwnerId, ProjectId, selectedFile);
+			isLoaded = true;
+		}
 		else
 		{
-			Console.WriteLine("Project is not owned by user");
+			isLoaded = true;
 		}
-
 	}
-	private async void SelectFile(string fileName)
+
+	private async Task SelectFile(string fileName)
 	{
-		await userFileService.SaveFileContentsAsync(fileName: selectedFile, fileContent: codeContent, userId: userId, projectId: ProjectId);
+		await userFileService.SaveFileContentsAsync(
+			fileName: selectedFile,
+			fileContent: codeContent,
+			userId: projectOwnerId,
+			projectId: ProjectId);
+
 		selectedFile = fileName;
-		codeContent = await userFileService.GetFileContentAsync(userId, ProjectId, fileName);
+
+		codeContent = await userFileService.GetFileContentAsync(projectOwnerId, ProjectId, fileName);
 		StateHasChanged();
 	}
+
 	private void ShowAddFilePrompt()
 	{
 		newFileName = string.Empty;
@@ -158,21 +177,27 @@
 	}
 	private async Task ConfirmAddFileAsync()
 	{
-		AddNewFileAsync(newFileName);
+		await AddNewFileAsync(newFileName);
+
 		showAddFileModal = false;
 		StateHasChanged();
 	}
+
 	private async Task AddNewFileAsync(string fileName)
 	{
-		await userFileService.CreateFile(userId, ProjectId, Path.GetFileNameWithoutExtension(fileName), Path.GetExtension(fileName));
+		await userFileService.CreateFile(projectOwnerId, ProjectId,
+			Path.GetFileNameWithoutExtension(fileName),
+			Path.GetExtension(fileName));
+
 		fileNames.Add(fileName);
 	}
+
 	private async Task CompileCode()
 	{
 
-		await userFileService.SaveFileContentsAsync(fileName: selectedFile, fileContent: codeContent, userId: userId, projectId: ProjectId);
+		await userFileService.SaveFileContentsAsync(fileName: selectedFile, fileContent: codeContent, userId: projectOwnerId, projectId: ProjectId);
 		string fileExtension = Path.GetExtension(selectedFile);
-		var result = await compilerService.CompileCodeAsync(await userFileService.GetLanguageByExtension(fileExtension),userId, ProjectId);
+		var result = await compilerService.CompileCodeAsync(await userFileService.GetLanguageByExtension(fileExtension), projectOwnerId, ProjectId);
 
 		if (result.IsSuccess)
 		{
@@ -192,7 +217,7 @@
 	private async Task SaveCode(string newCodeContent)
 	{
 		codeContent = newCodeContent;
-		await userFileService.SaveFileContentsAsync(fileName: selectedFile, fileContent: codeContent, userId: userId, projectId: ProjectId);
+		await userFileService.SaveFileContentsAsync(fileName: selectedFile, fileContent: codeContent, userId: projectOwnerId, projectId: ProjectId);
 	}
 
 	private string GetExtension(Project project)
