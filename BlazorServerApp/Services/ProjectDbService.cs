@@ -143,5 +143,16 @@ namespace BlazorServerApp.Services
                 throw new NullReferenceException(nameof(project));
             }
         }
+        public async Task<bool> IsUserAdminAsync(string userId)
+        {
+            if (string.IsNullOrWhiteSpace(userId))
+                return false;
+            var level = await applicationDbContext.Users
+                .Where(u => u.Id == userId)
+                .Select(u => u.PermissionLevel)
+                .FirstOrDefaultAsync();
+
+            return level == PermissionLevel.Admin;
+        }
     }
 }

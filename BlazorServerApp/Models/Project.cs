@@ -14,7 +14,7 @@ namespace BlazorServerApp.Models
         public string UserID { get; set; }
 
         [ForeignKey("UserID")]
-        public virtual IdentityUser User { get; set; }
+        public virtual ApplicationUser User { get; set; }
 
         [Required]
         [StringLength(255)]

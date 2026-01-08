@@ -6,43 +6,85 @@
 @inject AuthenticationStateProvider authenticationStateProvider
 @inject ProjectManagementService projectManagementService
 @inject NavigationManager navigationManager
+@inject ProjectDbService projectDbService
 
 <PageTitle>Index</PageTitle>
+@if (!loaded)
+{
+	<div>Loading</div>	
+}
+else if (isAdmin)
+{
+	<div class="admin-dashboard">
+		<h1 class="admin-dashboard__title">Admin Dashboard</h1>
 
-<div class="landing-container">
-	<div class="top-navbar">
-		<div class="home">
+		<div class="admin-dashboard__actions">
+			<a class="admin-dashboard__button" href="/admin/users">
+				Manage Users
+			</a>
 
-		</div>
-
-		<div class="profile">
-
+			<a class="admin-dashboard__button" href="/admin/projects">
+				Manage Projects
+			</a>
 		</div>
 	</div>
-	<div class="create-new-env-container">
-		<button class="create-new-env" @onclick="OpenModal">
-			Create a new environment
-		</button>
-	</div>
-	<div class="recent-envs-container">
-		<h2>Recent environments</h2>
-		<div class="list-of-recent-envs">
+}
+else
+{
+	
+	<div class="landing-container">
+		<div class="top-navbar">
+			<div class="home">
 
+			</div>
+
+			<div class="profile">
+
+			</div>
 		</div>
-		<a class="see-all-envs" href="/projects">
-			See all environments
-		</a>
+		<div class="create-new-env-container">
+			<button class="create-new-env" @onclick="OpenModal">
+				Create a new environment
+			</button>
+		</div>
+		<div class="recent-envs-container">
+			<h2>Recent environments</h2>
+			<div class="list-of-recent-envs">
+
+			</div>
+			<a class="see-all-envs" href="/projects">
+				See all environments
+			</a>
+		</div>
+
+
+		@if (isModalVisible)
+		{
+			<CreateProjectModal @bind-Visible="isModalVisible" ProjectCreated="HandleProjectCreated" />
+		}
 	</div>
-
-
-	@if (isModalVisible)
-	{
-		<CreateProjectModal @bind-Visible="isModalVisible" ProjectCreated="HandleProjectCreated" />
-	}
-</div>
+}
 
 @code {
 	private bool isModalVisible = false;
+
+	private bool isAdmin;
+	private bool loaded;
+
+	protected override async Task OnInitializedAsync()
+	{
+		var authState = await authenticationStateProvider.GetAuthenticationStateAsync();
+		var user = authState.User;
+
+		var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
+
+		isAdmin = await projectDbService.IsUserAdminAsync(userId);
+		loaded = true;
+	}
+
+
+
+
 	private void OpenModal()
 	{
 		isModalVisible = true;

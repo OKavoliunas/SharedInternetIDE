@@ -1,30 +1,34 @@
+using System;
+using System.ComponentModel.DataAnnotations;
+using System.Threading.Tasks;
+using BlazorServerApp.Models;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using Microsoft.AspNetCore.Identity;
-using System.Threading.Tasks;
-using System.ComponentModel.DataAnnotations;
 
 public class LoginModel : PageModel
 {
-    private readonly SignInManager<IdentityUser> signInManager;
+    private readonly SignInManager<ApplicationUser> signInManager;
 
-    public LoginModel(SignInManager<IdentityUser> signInManager)
+    public LoginModel(SignInManager<ApplicationUser> signInManager)
     {
         this.signInManager = signInManager;
     }
 
     [BindProperty]
-    public InputModel Input { get; set; }
+    public InputModel Input { get; set; } = new();
 
-    public string ErrorMessage { get; set; }
+    public string? ErrorMessage { get; set; }
 
     public void OnGet()
     {
     }
+
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> OnPostAsync()
     {
         Console.WriteLine("OnPostAsync called");
+
         if (!ModelState.IsValid)
         {
             foreach (var modelState in ModelState.Values)
@@ -36,17 +40,18 @@ public class LoginModel : PageModel
             }
             return Page();
         }
-        var result = await signInManager.PasswordSignInAsync(Input.Email, Input.Password, isPersistent: false, lockoutOnFailure: false);
+        var result = await signInManager.PasswordSignInAsync(
+            Input.Email,
+            Input.Password,
+            isPersistent: false,
+            lockoutOnFailure: false);
+
         if (result.Succeeded)
         {
             return LocalRedirect("~/");
         }
-        else
-        {
-            ModelState.AddModelError(string.Empty, "Invalid login attempt.");
-            return Page();
-        }
-        
+
+        ModelState.AddModelError(string.Empty, "Invalid login attempt.");
         return Page();
     }
 
@@ -54,10 +59,10 @@ public class LoginModel : PageModel
     {
         [Required]
         [EmailAddress]
-        public string Email { get; set; }
+        public string Email { get; set; } = string.Empty;
 
         [Required]
         [DataType(DataType.Password)]
-        public string Password { get; set; }
+        public string Password { get; set; } = string.Empty;
     }
 }

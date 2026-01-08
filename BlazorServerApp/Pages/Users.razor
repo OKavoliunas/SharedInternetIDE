@@ -1,0 +1,100 @@
+﻿@page "/admin/users"
+@using System.Security.Claims
+@using BlazorServerApp.Data
+@using BlazorServerApp.Models
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Routing
+@using Microsoft.EntityFrameworkCore
+@attribute [Authorize]
+
+@inject ApplicationDbContext Db
+@inject AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager Nav
+
+<PageTitle>Admin - Users</PageTitle>
+
+@if (!_loaded)
+{
+    <p>Loading...</p>
+}
+else if (!_isAdmin)
+{
+    <h3>Access denied</h3>
+    <p>You do not have permission to view this page.</p>
+}
+else
+{
+    <div class="admin-users-section">
+
+    <h1>Users</h1>
+
+    @if (_users.Count == 0)
+    {
+        <p>No users found.</p>
+    }
+    else
+    {
+        <table class="admin-users-table">
+            <thead>
+                <tr>
+                    <th>Email</th>
+                    <th>Permission</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var u in _users)
+                {
+                    <tr>
+                        <td>
+                            <NavLink class="admin-users-link" href="@($"/admin/users/{u.Id}")">
+                                @(string.IsNullOrWhiteSpace(u.Email) ? "(no email)" : u.Email)
+                            </NavLink>
+                        </td>
+                        <td>
+                            <NavLink class="admin-users-link" href="@($"/admin/users/{u.Id}")">
+                                @(u.PermissionLevel == PermissionLevel.Admin ? "Admin" : "User")
+                            </NavLink>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+    </div>
+}
+
+@code {
+    private bool _loaded;
+    private bool _isAdmin;
+    private List<ApplicationUser> _users = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var principal = authState.User;
+
+        if (principal?.Identity?.IsAuthenticated != true)
+        {
+            Nav.NavigateTo("/login", forceLoad: true);
+            return;
+        }
+
+        var userId = principal.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        _isAdmin = await Db.Users
+            .AsNoTracking()
+            .Where(u => u.Id == userId)
+            .Select(u => u.PermissionLevel)
+            .FirstOrDefaultAsync() == PermissionLevel.Admin;
+
+        if (_isAdmin)
+        {
+            _users = await Db.Users
+                .AsNoTracking()
+                .OrderBy(u => u.Email)
+                .ToListAsync();
+        }
+
+        _loaded = true;
+    }
+}

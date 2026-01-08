@@ -1,0 +1,343 @@
+﻿@page "/admin/users/{Id}"
+@using System.Security.Claims
+@using System.ComponentModel.DataAnnotations
+@using BlazorServerApp.Data
+@using BlazorServerApp.Models
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.EntityFrameworkCore
+@attribute [Authorize]
+
+@inject ApplicationDbContext Db
+@inject UserManager<ApplicationUser> UserManager
+@inject AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager Nav
+
+<PageTitle>Admin - Edit User</PageTitle>
+
+@if (!_loaded)
+{
+    <p>Loading...</p>
+}
+else if (!_isAdmin)
+{
+    <h3>Access denied</h3>
+    <p>You do not have permission to view this page.</p>
+}
+else if (_userNotFound)
+{
+    <h3>User not found</h3>
+    <button type="button" class="admin-user-edit__back" @onclick="GoBack">Back</button>
+}
+else
+{
+    <div class="admin-user-edit">
+        <h1 class="admin-user-edit__title">Edit User</h1>
+
+        @if (_messages.Count > 0)
+        {
+            <div class="admin-user-edit__messages">
+                @foreach (var m in _messages)
+                {
+                    <div class="admin-user-edit__message">@m</div>
+                }
+            </div>
+        }
+
+        <EditForm Model="_model" OnValidSubmit="SaveAsync">
+            <DataAnnotationsValidator />
+            <ValidationSummary />
+
+            <div class="admin-user-edit__field">
+                <label for="email">Email</label>
+                <InputText id="email" class="admin-user-edit__input" @bind-Value="_model.Email" />
+            </div>
+
+            <div class="admin-user-edit__field">
+                <label for="password">New Password</label>
+                <InputText id="password" class="admin-user-edit__input" @bind-Value="_model.NewPassword" type="password" />
+            </div>
+
+            <div class="admin-user-edit__field admin-user-edit__checkbox">
+                <InputCheckbox id="isAdmin" @bind-Value="_model.IsAdmin" />
+                <label for="isAdmin">Admin</label>
+            </div>
+
+            <div class="admin-user-edit__actions">
+            <button type="button"
+                    class="admin-user-edit__back"
+                    @onclick="GoBack"
+                    disabled="@_saving">
+                Back
+            </button>
+                <button type="button"
+                        class="admin-user-edit__delete"
+                        @onclick="OpenDeleteModal"
+                        disabled="@(_saving || _targetUser is null || _isDeletingSelf)">
+                    Delete
+                </button>
+                <button type="submit"
+                        class="admin-user-edit__save"
+                        disabled="@_saving">
+                    @(_saving ? "Saving..." : "Save")
+                </button>
+            </div>
+        </EditForm>
+        @if (_showDeleteModal)
+        {
+            <div class="modal-overlay" @onclick="CloseDeleteModal">
+                <div class="modal" @onclick:stopPropagation="true">
+                    <h2 class="modal__title">Delete user?</h2>
+
+                    <p class="modal__text">
+                        This action cannot be undone.
+                        @if (_targetUser is not null)
+                        {
+                            <br />
+                            <strong>@(_targetUser.Email ?? _targetUser.UserName ?? _targetUser.Id)</strong>
+                        }
+                    </p>
+
+                    @if (_messages.Count > 0)
+                    {
+                        <div class="admin-user-edit__messages">
+                            @foreach (var m in _messages)
+                            {
+                                <div class="admin-user-edit__message">@m</div>
+                            }
+                        </div>
+                    }
+
+                    <div class="modal__actions">
+                        <button type="button" class="modal__cancel" @onclick="CloseDeleteModal" disabled="@_saving">
+                            Cancel
+                        </button>
+
+                        <button type="button"
+                                class="modal__danger"
+                                @onclick="DeleteUserAsync"
+                                @onclick:stopPropagation="true"
+                                disabled="@(_saving || _targetUser is null || _isDeletingSelf)">
+                            @(_saving ? "Deleting..." : "Yes, delete")
+                        </button>
+                    </div>
+
+                    @if (_isDeletingSelf)
+                    {
+                        <p class="modal__text modal__text--warn">
+                            You cannot delete your own account while logged in.
+                        </p>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+}
+
+@code {
+    [Parameter] public string Id { get; set; } = string.Empty;
+    private bool _showDeleteModal;
+    private string? _currentUserId;
+    private bool _isDeletingSelf => _currentUserId != null && _targetUser != null && _targetUser.Id == _currentUserId;
+
+
+    private bool _loaded;
+    private bool _isAdmin;
+    private bool _userNotFound;
+    private bool _saving;
+
+    private ApplicationUser? _targetUser;
+    private EditUserModel _model = new();
+    private List<string> _messages = new();
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _loaded = false;
+        _messages.Clear();
+        _userNotFound = false;
+        _saving = false;
+
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var principal = authState.User;
+
+        if (principal?.Identity?.IsAuthenticated != true)
+        {
+            Nav.NavigateTo("/login", forceLoad: true);
+            return;
+        }
+
+        var currentUserId = principal.FindFirstValue(ClaimTypes.NameIdentifier);
+        _currentUserId = principal.FindFirstValue(ClaimTypes.NameIdentifier);
+
+
+        _isAdmin = await Db.Users
+            .AsNoTracking()
+            .Where(u => u.Id == currentUserId)
+            .Select(u => u.PermissionLevel)
+            .FirstOrDefaultAsync() == PermissionLevel.Admin;
+
+        if (!_isAdmin)
+        {
+            _loaded = true;
+            return;
+        }
+
+        _targetUser = await UserManager.FindByIdAsync(Id);
+        if (_targetUser == null)
+        {
+            _userNotFound = true;
+            _loaded = true;
+            return;
+        }
+
+        _model = new EditUserModel
+        {
+            Email = _targetUser.Email ?? _targetUser.UserName ?? string.Empty,
+            NewPassword = string.Empty,
+            IsAdmin = _targetUser.PermissionLevel == PermissionLevel.Admin
+        };
+
+        _loaded = true;
+    }
+
+    private async Task SaveAsync()
+    {
+        if (_targetUser == null)
+            return;
+
+        _saving = true;
+        _messages.Clear();
+
+        try
+        {
+            var newEmail = (_model.Email ?? string.Empty).Trim();
+
+            if (string.IsNullOrWhiteSpace(newEmail))
+            {
+                _messages.Add("Email cannot be empty.");
+                return;
+            }
+
+            if (!string.Equals(_targetUser.Email, newEmail, StringComparison.OrdinalIgnoreCase))
+            {
+                _targetUser.Email = newEmail;
+                _targetUser.UserName = newEmail;
+
+                _targetUser.NormalizedEmail = UserManager.NormalizeEmail(newEmail);
+                _targetUser.NormalizedUserName = UserManager.NormalizeName(newEmail);
+
+                var updateResult = await UserManager.UpdateAsync(_targetUser);
+                if (!updateResult.Succeeded)
+                {
+                    foreach (var e in updateResult.Errors)
+                        _messages.Add(e.Description);
+
+                    return;
+                }
+            }
+
+            var desiredLevel = _model.IsAdmin ? PermissionLevel.Admin : PermissionLevel.User;
+            if (_targetUser.PermissionLevel != desiredLevel)
+            {
+                _targetUser.PermissionLevel = desiredLevel;
+
+                var permResult = await UserManager.UpdateAsync(_targetUser);
+                if (!permResult.Succeeded)
+                {
+                    foreach (var e in permResult.Errors)
+                        _messages.Add(e.Description);
+
+                    return;
+                }
+            }
+            if (!string.IsNullOrWhiteSpace(_model.NewPassword))
+            {
+                var token = await UserManager.GeneratePasswordResetTokenAsync(_targetUser);
+                var pwdResult = await UserManager.ResetPasswordAsync(_targetUser, token, _model.NewPassword);
+
+                if (!pwdResult.Succeeded)
+                {
+                    foreach (var e in pwdResult.Errors)
+                        _messages.Add(e.Description);
+
+                    return;
+                }
+            }
+
+            _messages.Add("Saved successfully.");
+        }
+        catch (Exception ex)
+        {
+            _messages.Add($"Unexpected error: {ex.Message}");
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+    private void OpenDeleteModal()
+    {
+        _messages.Clear();
+        _showDeleteModal = true;
+    }
+
+    private void CloseDeleteModal()
+    {
+        _showDeleteModal = false;
+    }
+
+    private async Task DeleteUserAsync()
+    {
+        if (_targetUser == null)
+            return;
+
+        if (_isDeletingSelf)
+        {
+            _messages.Clear();
+            _messages.Add("You cannot delete your own account while logged in.");
+            return;
+        }
+
+        _saving = true;
+        _messages.Clear();
+
+        try
+        {
+            var result = await UserManager.DeleteAsync(_targetUser);
+            if (!result.Succeeded)
+            {
+                foreach (var e in result.Errors)
+                    _messages.Add(e.Description);
+
+                return;
+            }
+
+            _showDeleteModal = false;
+            Nav.NavigateTo("/admin/users", forceLoad: true);
+        }
+        catch (Exception ex)
+        {
+            _messages.Add($"Unexpected error: {ex.Message}");
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    private void GoBack()
+    {
+        Nav.NavigateTo("/admin/users");
+    }
+
+    public class EditUserModel
+    {
+        [Required]
+        [EmailAddress]
+        public string Email { get; set; } = string.Empty;
+
+        public string? NewPassword { get; set; }
+
+        public bool IsAdmin { get; set; }
+    }
+}

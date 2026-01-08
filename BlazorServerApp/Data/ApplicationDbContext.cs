@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 namespace BlazorServerApp.Data 
 {
-    public class ApplicationDbContext : IdentityDbContext
+    public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     {
         public DbSet<Project> Projects { get; set; }
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
@@ -13,6 +13,10 @@ namespace BlazorServerApp.Data
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
+
+            builder.Entity<ApplicationUser>()
+                   .Property(u => u.PermissionLevel)
+                   .HasDefaultValue(PermissionLevel.User);
 
             builder.Entity<Project>(entity =>
             {
